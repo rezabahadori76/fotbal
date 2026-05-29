@@ -1,36 +1,36 @@
 # Pipeline
 
-همه اسکریپت‌های پردازش CSV و ویدیو اینجا هستند. فایل‌های داده (ویدیو، CSV، `team config.json`) در **ریشه پروژه** می‌مانند.
+All CSV and video processing scripts live here. Data files (video, CSV, `team config.json`) stay in the **project root**.
 
-## اجرا (از ریشه پروژه)
+## Run (from project root)
 
 ```bash
 cd /path/to/fotbal_UI
 source .venv/bin/activate
 
-# کل پایپ‌لاین CSV (تیم → پاکسازی)
+# Full CSV pipeline (team fix → cleanup)
 python -m pipeline.run
 
-# فقط اصلاح team_id
+# Team ID fix only
 python -m pipeline.fix_team_id_by_track
 
-# فقط پاکسازی با roster
+# Roster-based cleanup only
 python -m pipeline.clean_tracking_csv
 
-# رسم باکس روی ویدیو
+# Draw bounding boxes on video
 python -m pipeline.draw_boxes_on_video
 ```
 
-## خروجی‌های پیش‌فرض
+## Default outputs
 
-| مرحله | فایل |
+| Stage | File |
 |--------|------|
-| ورودی خام | `output_video 2.csv` |
-| بعد از fix team | `output_video_2_team_fixed.csv` |
-| نهایی cleaned | `output_video_2_cleaned.csv` |
-| ویدیو با باکس | `output_annotated.mp4` |
+| Raw input | `output_video 2.csv` |
+| After team fix | `output_video_2_team_fixed.csv` |
+| Final cleaned | `output_video_2_cleaned.csv` |
+| Annotated video | `output_annotated.mp4` |
 
-## UI بازیکن
+## Player UI
 
 ```bash
 python player_editor_app.py

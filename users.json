@@ -1,9 +1,18 @@
 {
   "secret_key": "pitchiq-change-this-secret-in-production",
+  "admin": {
+    "email": "admin@academy.com",
+    "display_name": "Academy Admin"
+  },
   "coach": {
     "username": "coach",
     "password": "coach123",
     "display_name": "Head Coach"
   },
-  "player_password": "player123"
+  "player_password": "player123",
+  "hub_accounts": {
+    "admin": "admin@academy.com",
+    "coach": "coach@academy.com",
+    "player": "player@academy.com"
+  }
 }

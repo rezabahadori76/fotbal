@@ -18,8 +18,17 @@ def load_auth_config(path: Path) -> dict:
     else:
         data = {
             "secret_key": "pitchiq-dev-secret",
+            "admin": {
+                "email": "admin@academy.com",
+                "display_name": "Academy Admin",
+            },
             "coach": {"username": "coach", "password": "coach123", "display_name": "Coach"},
             "player_password": "player123",
+            "hub_accounts": {
+                "admin": "admin@academy.com",
+                "coach": "coach@academy.com",
+                "player": "player@academy.com",
+            },
         }
     if not data.get("secret_key"):
         data["secret_key"] = "pitchiq-dev-secret"
@@ -58,15 +67,41 @@ def verify_player_login(auth_cfg: dict, team_config: dict, team_id: int, jersey_
     return _password_ok(expected, password)
 
 
+def hub_email_for_role(auth_cfg: dict, role: str) -> str:
+    accounts = auth_cfg.get("hub_accounts", {})
+    defaults = {
+        "admin": "admin@academy.com",
+        "coach": "coach@academy.com",
+        "player": "player@academy.com",
+    }
+    return accounts.get(role, defaults.get(role, "player@academy.com"))
+
+
+def login_admin(auth_cfg: dict) -> None:
+    admin = auth_cfg.get("admin", {})
+    session.clear()
+    session["role"] = "admin"
+    session["display_name"] = admin.get("display_name", "Admin")
+    session["hub_email"] = admin.get("email") or hub_email_for_role(auth_cfg, "admin")
+    session.permanent = True
+
+
 def login_coach(auth_cfg: dict) -> None:
     coach = auth_cfg.get("coach", {})
     session.clear()
     session["role"] = "coach"
     session["display_name"] = coach.get("display_name", "Coach")
+    session["hub_email"] = hub_email_for_role(auth_cfg, "coach")
     session.permanent = True
 
 
-def login_player(team_id: int, jersey_number: int, name: str | None, team_name: str | None) -> None:
+def login_player(
+    team_id: int,
+    jersey_number: int,
+    name: str | None,
+    team_name: str | None,
+    auth_cfg: dict | None = None,
+) -> None:
     session.clear()
     session["role"] = "player"
     session["team_id"] = team_id
@@ -76,6 +111,8 @@ def login_player(team_id: int, jersey_number: int, name: str | None, team_name: 
         label = f"#{jersey_number} {name}"
     session["display_name"] = label
     session["team_name"] = team_name or ""
+    if auth_cfg:
+        session["hub_email"] = hub_email_for_role(auth_cfg, "player")
     session.permanent = True
 
 
@@ -84,7 +121,11 @@ def logout_user() -> None:
 
 
 def is_logged_in() -> bool:
-    return session.get("role") in ("coach", "player")
+    return session.get("role") in ("admin", "coach", "player")
+
+
+def is_admin() -> bool:
+    return session.get("role") == "admin"
 
 
 def is_coach() -> bool:
@@ -98,6 +139,8 @@ def is_player() -> bool:
 def current_user_dict() -> dict[str, Any] | None:
     if not is_logged_in():
         return None
+    if is_admin():
+        return {"role": "admin", "display_name": session.get("display_name", "Admin")}
     if is_coach():
         return {"role": "coach", "display_name": session.get("display_name", "Coach")}
     return {

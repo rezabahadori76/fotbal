@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COACH
+  PLAYER
+}
+
+enum QuestionType {
+  PREDEFINED
+  CUSTOM
+}
+
+enum AssignmentStatus {
+  PENDING
+  ANSWERED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coachedPlayers PlayerProfile[] @relation("CoachPlayers")
+
+  playerProfile PlayerProfile? @relation("PlayerUser")
+
+  customQuestions QuestionTemplate[] @relation("QuestionAuthor")
+
+  assignmentsSent QuestionAssignment[] @relation("AssignmentCoach")
+}
+
+model PlayerProfile {
+  id        String   @id @default(cuid())
+  position  String?
+  squad     String?
+  jerseyNo  Int? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation("PlayerUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  coachId String
+  coach   User   @relation("CoachPlayers", fields: [coachId], references: [id], onDelete: Cascade)
+
+  assignments QuestionAssignment[]
+}
+
+model QuestionTemplate {
+  id        String       @id @default(cuid())
+  text      String
+  category  String?
+  optionA   String
+  optionB   String
+  optionC   String
+  optionD   String
+  type      QuestionType @default(PREDEFINED)
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  authorId String?
+  author   User?   @relation("QuestionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  assignments QuestionAssignment[]
+}
+
+model QuestionAssignment {
+  id        String           @id @default(cuid())
+  status    AssignmentStatus @default(PENDING)
+  dueDate   DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  coachId String
+  coach   User   @relation("AssignmentCoach", fields: [coachId], references: [id], onDelete: Cascade)
+
+  playerId String
+  player   PlayerProfile @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   QuestionTemplate @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  answer Answer?
+
+  @@index([playerId, status])
+  @@index([coachId])
+}
+
+model Answer {
+  id              String   @id @default(cuid())
+  selectedOption  Int
+  text            String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assignmentId String             @unique
+  assignment   QuestionAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+}

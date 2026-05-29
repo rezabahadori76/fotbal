@@ -1,3 +1,3 @@
-# Legacy data
+# Legacy data files
 
-فقط فایل‌های CSV/ویدیو قدیمی. اسکریپت‌های پایپ‌لاین به پوشه [`../pipeline/`](../pipeline/) منتقل شدند.
+Older CSV/video files only. Pipeline scripts were moved to [`../pipeline/`](../pipeline/).

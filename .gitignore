@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 .venv/
 .env
+.merge_sources/
 
 # OS
 .DS_Store
@@ -11,3 +12,17 @@ __pycache__/
 # Oversized backup only (1.2GB; use your_video2.mp4 in repo)
 *.bak
 output_annotated.mp4v*
+
+# Embedded Academy Hub Next.js app
+academy_hub/node_modules/
+academy_hub/.next/
+academy_hub/out/
+academy_hub/build/
+academy_hub/coverage/
+academy_hub/.env
+academy_hub/.env*.local
+academy_hub/.vercel/
+academy_hub/*.tsbuildinfo
+academy_hub/next-env.d.ts
+academy_hub/prisma/*.db
+academy_hub/prisma/*.db-journal

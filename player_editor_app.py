@@ -8,6 +8,8 @@ from __future__ import annotations
 import argparse
 import io
 import math
+import os
+import urllib.parse
 from pathlib import Path
 
 import pandas as pd
@@ -15,16 +17,21 @@ from flask import Flask, Response, flash, jsonify, redirect, render_template, re
 
 from analytics_engine import build_coach_analytics, build_player_analytics
 from roster_config import iter_team_roster, named_roster_keys
+from hub_auth import academy_hub_login, ensure_fm_player, lookup_fm_player
+from hub_proxy import proxy_to_academy_hub
 from auth_utils import (
     coach_required,
     current_user_dict,
     find_player_in_config,
+    is_admin,
     is_coach,
     is_logged_in,
     is_player,
     load_auth_config,
     login_coach,
+    login_admin,
     login_player,
+    hub_email_for_role,
     login_required,
     logout_user,
     player_can_access,
@@ -548,8 +555,42 @@ def make_app(
     app = Flask(__name__)
     app.config["EDITOR_CTX"] = ctx
     app.config["AUTH_CFG"] = auth_cfg
+    app.config["ACADEMY_DASHBOARD_URL"] = os.environ.get("ACADEMY_DASHBOARD_URL", "/hub")
+    app.config["ACADEMY_HUB_UPSTREAM"] = os.environ.get("ACADEMY_HUB_UPSTREAM", "http://127.0.0.1:3000")
     app.secret_key = auth_cfg.get("secret_key", "pitchiq-dev-secret")
     app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+    hub_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+
+    def _redirect_hub_enter():
+        return redirect(url_for("hub_enter"))
+
+    @app.route("/hub/enter")
+    @login_required
+    def hub_enter():
+        role = session.get("role", "player")
+        email = session.get("hub_email") or hub_email_for_role(auth_cfg, role)
+        home, cookies, err = academy_hub_login(app.config["ACADEMY_HUB_UPSTREAM"], email)
+        if err:
+            flash(err, "error")
+            return redirect(url_for("index"))
+        next_path = request.args.get("next", "").strip()
+        if next_path.startswith("/hub/"):
+            destination = next_path
+        else:
+            destination = home or f"/hub/{role if role != 'admin' else 'admin'}"
+        resp = redirect(destination)
+        for cookie in cookies:
+            resp.headers.add("Set-Cookie", cookie)
+        return resp
+
+    @app.route("/hub", defaults={"subpath": ""}, methods=hub_methods)
+    @app.route("/hub/", defaults={"subpath": ""}, methods=hub_methods)
+    @app.route("/hub/<path:subpath>", methods=hub_methods)
+    def academy_hub_proxy(subpath: str = ""):
+        if is_logged_in() and subpath in ("", "login"):
+            return _redirect_hub_enter()
+        return proxy_to_academy_hub(app.config["ACADEMY_HUB_UPSTREAM"], subpath)
 
     @app.after_request
     def _no_cache_html(response: Response):
@@ -567,38 +608,64 @@ def make_app(
         for tid in (1, 2):
             t = match.get(f"team_{tid}", {})
             teams.append({"id": tid, "name": t.get("name", f"Team {tid}")})
+
+        active_role = request.form.get("role", "coach").strip() or "coach"
+        form_ctx = {
+            "teams": teams,
+            "active_role": active_role,
+            "username": request.form.get("username", ""),
+            "email": request.form.get("email", ""),
+            "team_id": request.form.get("team_id", ""),
+            "jersey_number": request.form.get("jersey_number", ""),
+        }
+
         if request.method == "POST":
-            role = (request.form.get("role") or "coach").strip()
-            if role == "coach":
+            role = active_role
+            password = request.form.get("password") or ""
+
+            if role == "admin":
+                login_admin(auth_cfg)
+                return redirect(url_for("index"))
+
+            elif role == "coach":
                 username = (request.form.get("username") or "").strip()
-                password = request.form.get("password") or ""
-                if verify_coach_login(auth_cfg, username, password):
+                if not password:
+                    flash("Password is required.", "error")
+                elif verify_coach_login(auth_cfg, username, password):
                     login_coach(auth_cfg)
                     nxt = request.args.get("next") or url_for("index")
                     return redirect(nxt)
-                flash("Invalid coach username or password.", "error")
-            else:
+                else:
+                    flash("Invalid coach username or password.", "error")
+
+            elif role == "player":
                 try:
                     team_id = int(request.form.get("team_id", 0))
                     jersey_number = int(request.form.get("jersey_number", 0))
                 except ValueError:
                     team_id = jersey_number = 0
-                password = request.form.get("password") or ""
                 player = find_player_in_config(team_config, team_id, jersey_number)
-                if not player:
+                if not password:
+                    flash("Password is required.", "error")
+                elif not player:
                     flash("Jersey number not found on that team roster.", "error")
                 elif verify_player_login(auth_cfg, team_config, team_id, jersey_number, password):
                     team_name = match.get(f"team_{team_id}", {}).get("name", "")
-                    login_player(team_id, jersey_number, player.get("name"), team_name)
+                    login_player(team_id, jersey_number, player.get("name"), team_name, auth_cfg)
                     return redirect(url_for("index"))
                 else:
                     flash("Invalid password for player login.", "error")
-        return render_template("login.html", teams=teams)
+
+        return render_template("login.html", **form_ctx)
 
     @app.route("/logout")
     def logout():
         logout_user()
-        return redirect(url_for("login"))
+        resp = redirect(url_for("login"))
+        resp.set_cookie("next-auth.session-token", "", expires=0, path="/hub")
+        resp.set_cookie("next-auth.csrf-token", "", expires=0, path="/hub")
+        resp.set_cookie("next-auth.callback-url", "", expires=0, path="/hub")
+        return resp
 
     @app.route("/")
     @login_required
@@ -613,6 +680,7 @@ def make_app(
             video_name=video_path.name,
             csv_name=csv_path.name,
             current_user=user,
+            academy_dashboard_url="/hub/enter",
         )
 
     @app.route("/favicon.ico")
@@ -783,6 +851,56 @@ def make_app(
         if not profile.get("name"):
             profile = {**profile, "name": meta.get("name"), "position": meta.get("position")}
         return jsonify({"profile": profile})
+
+    @app.route("/api/fm_player/<int:team_id>/<int:jersey_number>")
+    @login_required
+    def api_fm_player(team_id: int, jersey_number: int):
+        if not is_coach() and not is_admin():
+            return jsonify({"error": "Forbidden"}), 403
+        c = app.config["EDITOR_CTX"]
+        meta = _lookup_player_meta(c.get("team_config", {}), team_id, jersey_number)
+        stats = c.get("roster_stats", [])
+        roster = next(
+            (s for s in stats if s["team_id"] == team_id and s["jersey_number"] == jersey_number),
+            {},
+        )
+        name = meta.get("name") or roster.get("name") or f"Player #{jersey_number}"
+        position = meta.get("position") or roster.get("position")
+        squad = roster.get("team_name") or meta.get("team_name")
+        result = ensure_fm_player(
+            app.config["ACADEMY_HUB_UPSTREAM"],
+            jersey_number,
+            name,
+            position=position,
+            squad=squad,
+        )
+        if not result:
+            role = session.get("role", "coach")
+            hub_subpath = "admin" if role == "admin" else "coach"
+            hub_path = f"/hub/{hub_subpath}/players"
+            enter_url = f"/hub/enter?next={urllib.parse.quote(hub_path, safe='')}"
+            return jsonify(
+                {
+                    "found": False,
+                    "name": name,
+                    "hubPath": hub_path,
+                    "url": enter_url,
+                }
+            )
+        role = session.get("role", "coach")
+        hub_subpath = "admin" if role == "admin" else "coach"
+        player_id = result["id"]
+        hub_path = f"/hub/{hub_subpath}/responses?playerId={player_id}"
+        enter_url = f"/hub/enter?next={urllib.parse.quote(hub_path, safe='')}"
+        return jsonify(
+            {
+                "found": True,
+                "playerId": player_id,
+                "name": result.get("name") or name,
+                "hubPath": hub_path,
+                "url": enter_url,
+            }
+        )
 
     @app.route("/api/analytics")
     @login_required

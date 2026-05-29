@@ -1,0 +1,61 @@
+{
+  "match": {
+    "team_1": {
+      "name": "Cedar Stars Academy Newark MLS NEXT U17 AD",
+      "kit_color": "white",
+      "goalkeeper_color": "blue",
+      "players": [
+        { "number": 1, "name": "Enrico Menegatti", "position": null, "status": "Not Signed Up" },
+        { "number": 26, "name": "Enzo Lolos", "position": "LCF" },
+        { "number": 28, "name": "Maher Mohd", "position": "RAM" },
+        { "number": 30, "name": "Eric Petrush", "position": "LAM" },
+        { "number": 45, "name": "Braden Chu", "position": "CM" },
+        { "number": 47, "name": "Jacob Hook", "position": "GK" },
+        { "number": 49, "name": "Oliver Neill", "position": null },
+        { "number": 50, "name": "Koen Randleman", "position": "LB" },
+        { "number": 51, "name": "Andres Rodriguez", "position": null, "status": "Pending Verification" },
+        { "number": 57, "name": "Andres Garcia", "position": null },
+        { "number": 59, "name": "Jai Hejib", "position": null, "status": "Pending Verification" },
+        { "number": 63, "name": "Daniel Milanov", "position": "LWB" },
+        { "number": 64, "name": "Abdul Fareed Kiram", "position": null, "status": "Not Signed Up" },
+        { "number": 68, "name": "Jasser Sabahi", "position": "LB" },
+        { "number": 74, "name": "Itai Grady", "position": null, "status": "Pending Verification" },
+        { "number": 76, "name": "Kevin Gonzalez Rodriguez", "position": "GK" },
+        { "number": 81, "name": "Max Del Toro", "position": "CB" },
+        { "number": 86, "name": "Justin Amaya", "position": "RCDM" },
+        { "number": 87, "name": "Ivan Naranjo", "position": "LB" },
+        { "number": 99, "name": "Sebastian Lima", "position": null, "status": "Pending Verification" }
+      ]
+    },
+    "team_2": {
+      "name": "Cedar Stars Academy Bergen MLS NEXT U17 AD",
+      "kit_color": "green",
+      "goalkeeper_color": "blue",
+      "players": [
+        { "number": 25, "name": "Syed Talha Hussain", "position": "RB" },
+        { "number": 31, "name": "Petru Anghel", "position": "RB" },
+        { "number": 32, "name": "Connor Fletcher", "position": "LB" },
+        { "number": 38, "name": "Rishon Mangal", "position": "LB" },
+        { "number": 39, "name": "Adrian Ormeno", "position": "CM" },
+        { "number": 40, "name": "Alexis Rabanales", "position": null, "status": "Not Signed Up" },
+        { "number": 42, "name": "Ewan Stapley", "position": "CF" },
+        { "number": 43, "name": "Oliver Storr Brown", "position": "CM" },
+        { "number": 46, "name": "Ayden D'sa", "position": "CM" },
+        { "number": 66, "name": "Jeanfranco Montufar", "position": null, "status": "Pending Verification" },
+        { "number": 75, "name": "Olukomi Sowore", "position": "CF" },
+        { "number": 82, "name": "Ethan Isenberg", "position": null },
+        { "number": 84, "name": "Aedan Burdiez", "position": "CB" },
+        { "number": 85, "name": "Jake Demarco", "position": null },
+        { "number": 88, "name": "Joseph LeClair III", "position": "GK" },
+        { "number": 90, "name": "Daniel Shalaby", "position": "CAM" },
+        { "number": 91, "name": "Mattheo Correa", "position": "CM" }
+      ]
+    },
+    "instructions": {
+      "white_team": "Cedar Stars Academy Newark MLS NEXT U17 AD",
+      "green_team": "Cedar Stars Academy Bergen MLS NEXT U17 AD",
+      "goalkeeper_color": "blue",
+      "identify_players_by": "jersey_number"
+    }
+  }
+}
