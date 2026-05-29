@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PitchIQ — Match Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%2310b981' width='32' height='32' rx='8'/%3E%3Cpath fill='%23061612' d='M16 6l2.5 7.5H26l-6 4.5 2.5 7.5L16 21l-6.5 4.5 2.5-7.5-6-4.5h7.5z'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #060a12;
+      --bg-elevated: #0c1220;
+      --surface: #111827;
+      --surface-2: #1a2332;
+      --surface-hover: #222d3f;
+      --border: rgba(148, 163, 184, 0.12);
+      --border-strong: rgba(148, 163, 184, 0.22);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --dim: #64748b;
+      --accent: #10b981;
+      --accent-dim: rgba(16, 185, 129, 0.15);
+      --accent-glow: rgba(16, 185, 129, 0.35);
+      --team1: #f59e0b;
+      --team1-dim: rgba(245, 158, 11, 0.15);
+      --team2: #22c55e;
+      --team2-dim: rgba(34, 197, 94, 0.15);
+      --ball: #fbbf24;
+      --danger: #f87171;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      --font: "DM Sans", system-ui, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+      --sidebar-w: 300px;
+      --insights-w: 320px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(16, 185, 129, 0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 90% 100%, rgba(59, 130, 246, 0.06), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header */
+    .topbar {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 20px;
+      background: rgba(12, 18, 32, 0.85);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      flex-shrink: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #059669);
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    .brand span {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .topbar-meta {
+      flex: 1;
+      font-size: 0.8rem;
+      color: var(--dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+    .btn {
+      font-family: var(--font);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #059669);
+      color: #022c22;
+    }
+    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .btn-ghost {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+    .btn-icon { padding: 8px 12px; min-width: 40px; justify-content: center; }
+
+    /* Layout */
+    .workspace {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr var(--insights-w);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* Left sidebar */
+    .sidebar {
+      background: rgba(17, 24, 39, 0.6);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      backdrop-filter: blur(8px);
+    }
+    .sidebar-tools {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .search-wrap {
+      position: relative;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 10px 12px 10px 36px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      outline: none;
+    }
+    .search-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .search-wrap::before {
+      content: "⌕";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--dim);
+      font-size: 0.9rem;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .nav-tab {
+      flex: 1;
+      padding: 7px 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active {
+      background: var(--surface-2);
+      color: var(--accent);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .team-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .team-pills-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--dim);
+      width: 100%;
+      margin-bottom: 2px;
+    }
+    .team-pills .pill {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.75rem;
+    }
+    .insights-team-pills {
+      padding: 0 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .pill {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+    .pill.active { border-color: transparent; color: #000; }
+    .pill.t1.active { background: var(--team1); }
+    .pill.t2.active { background: var(--team2); }
+    .pill.all.active { background: var(--surface-2); color: var(--text); }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 8px 12px;
+    }
+    .team-section {
+      margin-bottom: 12px;
+    }
+    .team-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 10px 8px;
+      margin-top: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .team-section-header span:first-child {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      line-height: 1.3;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .team-section-header .team-count {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--dim);
+      font-family: var(--mono);
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+    .list-col-head {
+      display: grid;
+      grid-template-columns: 40px 1fr 52px 52px;
+      gap: 6px;
+      padding: 4px 10px 6px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--dim);
+    }
+    .list-col-head span:nth-child(3),
+    .list-col-head span:nth-child(4) { text-align: right; }
+    .player-card {
+      display: grid;
+      grid-template-columns: 40px 1fr 52px 52px;
+      gap: 6px;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+      margin-bottom: 2px;
+    }
+    .player-card:hover {
+      background: var(--surface-hover);
+      border-color: var(--border);
+    }
+    .player-card.selected {
+      background: var(--accent-dim);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .player-card.not-detected { opacity: 0.5; }
+    .jersey-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      font-family: var(--mono);
+    }
+    .jersey-badge.t1 { background: var(--team1-dim); color: var(--team1); border: 1px solid rgba(245,158,11,0.3); }
+    .jersey-badge.t2 { background: var(--team2-dim); color: var(--team2); border: 1px solid rgba(34,197,94,0.3); }
+    .jersey-badge.ball { background: rgba(251,191,36,0.12); color: var(--ball); border: 1px solid rgba(251,191,36,0.35); }
+    .player-card-body { min-width: 0; }
+    .player-card-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.25;
+    }
+    .player-card-meta {
+      font-size: 0.68rem;
+      color: var(--dim);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stat-cell {
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .stat-cell.pitch { color: var(--text); }
+    .stat-cell.ball { color: var(--ball); }
+    .stat-cell.empty { color: var(--dim); font-weight: 400; }
+    .stat-cell-sub {
+      display: block;
+      font-size: 0.58rem;
+      font-weight: 500;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .clips-panel {
+      display: none;
+      flex-shrink: 0;
+      flex-direction: column;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-elevated);
+      max-height: 220px;
+      overflow: hidden;
+    }
+    .clips-panel.open {
+      display: flex;
+    }
+    .clips-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .clips-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .clips-summary {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 4px;
+      font-family: var(--mono);
+    }
+    .clips-totals {
+      text-align: right;
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      color: var(--dim);
+      line-height: 1.4;
+    }
+    .clips-totals strong {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+    }
+    #clipsContent {
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    .clips-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .timestamp-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      font-weight: 500;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      cursor: pointer;
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+    .timestamp-badge:hover {
+      background: var(--accent);
+      color: #022c22;
+      border-color: var(--accent);
+    }
+    .timestamp-badge.ball {
+      color: var(--ball);
+      border-color: rgba(251, 191, 36, 0.35);
+      background: rgba(251, 191, 36, 0.06);
+    }
+    .timestamp-badge.ball:hover {
+      background: var(--ball);
+      color: #1a1200;
+    }
+    .empty-msg { padding: 24px 12px; text-align: center; color: var(--dim); font-size: 0.85rem; }
+    .loading-spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Video center */
+    .video-stage {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: #030508;
+      padding: 16px;
+      gap: 12px;
+    }
+    .video-shell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      background: #000;
+    }
+    .video-box {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      aspect-ratio: 16 / 9;
+      background: #000;
+    }
+    .video-surface {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      overflow: hidden;
+    }
+    .video-surface video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      background: #000;
+    }
+    #overlayCanvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #overlayCanvas.active { display: block; }
+    .video-surface.spotlight-active video {
+      visibility: hidden;
+    }
+    .player-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: rgba(12, 18, 32, 0.95);
+      border-top: 1px solid var(--border);
+    }
+    .player-bar input[type="range"] {
+      flex: 1 1 140px;
+      min-width: 100px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .time-readout, .frame-readout {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .frame-readout { color: var(--accent); font-weight: 500; }
+    .status {
+      font-size: 0.75rem;
+      color: var(--ball);
+      margin-left: auto;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .shortcuts-hint {
+      font-size: 0.72rem;
+      color: var(--dim);
+      text-align: center;
+      padding: 4px;
+    }
+    kbd {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    /* Insights panel */
+    .insights {
+      background: rgba(17, 24, 39, 0.6);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow-y: auto;
+      backdrop-filter: blur(8px);
+    }
+    .insights-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(17, 24, 39, 0.95);
+      z-index: 5;
+    }
+    .insights-header h2 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .insights-header p { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    .insights-body { padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+    .stat-card.wide { grid-column: 1 / -1; }
+    .stat-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--dim);
+    }
+    .stat-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      margin-top: 4px;
+      letter-spacing: -0.02em;
+    }
+    .stat-value.sm { font-size: 1rem; }
+    .stat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+    .possession-bar {
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      display: flex;
+      background: var(--bg);
+      margin-top: 8px;
+    }
+    .possession-bar .t1 { background: var(--team1); }
+    .possession-bar .t2 { background: var(--team2); }
+
+    .team-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+    .team-block h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.t1 { background: var(--team1); }
+    .dot.t2 { background: var(--team2); }
+    .team-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      padding: 4px 0;
+      color: var(--muted);
+    }
+    .team-row span:last-child { color: var(--text); font-family: var(--mono); font-weight: 500; }
+
+    .rank-list { list-style: none; }
+    .rank-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .rank-item:last-child { border-bottom: none; }
+    .rank-item:hover { opacity: 0.9; }
+    .rank-num {
+      width: 22px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--dim);
+      font-weight: 600;
+    }
+    .rank-info { flex: 1; min-width: 0; }
+    .rank-name { font-size: 0.82rem; font-weight: 600; }
+    .rank-val { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
+
+    .profile-hero {
+      text-align: center;
+      padding: 16px 0;
+    }
+    .profile-jersey {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      margin: 0 auto 12px;
+    }
+    .profile-name { font-size: 1.1rem; font-weight: 700; }
+    .profile-pos { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .tag.detected { background: var(--accent-dim); color: var(--accent); }
+    .tag.missing { background: rgba(248,113,113,0.12); color: var(--danger); }
+
+    .timeline-chart {
+      height: 48px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      margin-top: 8px;
+    }
+    .timeline-bar {
+      flex: 1;
+      min-width: 3px;
+      border-radius: 2px 2px 0 0;
+      background: linear-gradient(to top, var(--team1), var(--team2));
+      opacity: 0.85;
+    }
+
+    .user-pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+    body.mode-player .user-pill {
+      background: var(--team1-dim);
+      color: var(--team1);
+    }
+    .coach-only { display: block; }
+    .player-only { display: none !important; }
+    body.mode-player .coach-only { display: none !important; }
+    body.mode-player .player-only { display: block !important; }
+    body.mode-player .player-only.flex { display: flex !important; }
+    body.mode-player .sidebar-tools .coach-only { display: none !important; }
+    body.mode-player .section-label.player-clips-label {
+      display: block !important;
+      padding: 12px 8px 6px;
+    }
+
+    @media (max-width: 1200px) {
+      .workspace { grid-template-columns: 260px 1fr; }
+      .insights { display: none; }
+    }
+  </style>
+  <link rel="stylesheet" href="/static/analytics.css?v=3" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <div class="brand-icon">⚽</div>
+      <div>
+        <h1>PitchIQ</h1>
+        <span>Match Intelligence</span>
+      </div>
+    </a>
+    <div class="topbar-meta">
+      <span class="coach-only">{{ video_name }} · {{ csv_name }}</span>
+      <span class="player-only">My match video</span>
+    </div>
+    <div class="topbar-actions">
+      <span class="user-pill" id="userPill" title="Signed in"></span>
+      <button type="button" class="btn btn-ghost" id="btnAnalytics" title="Analytics &amp; reports">📊 Analytics</button>
+      <button type="button" class="btn btn-ghost coach-only" id="btnHelp" title="Keyboard shortcuts">?</button>
+      <button type="button" class="btn btn-primary coach-only" id="btnExport">Export CSV</button>
+      <a href="/logout" class="btn btn-ghost">Logout</a>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="sidebar-tools coach-only">
+        <div class="search-wrap">
+          <input type="search" id="playerSearch" placeholder="Search player or #…" autocomplete="off" />
+        </div>
+        <div class="team-pills" id="sidebarTeamPills">
+          <span class="team-pills-label">Team</span>
+          <button type="button" class="pill t1 active" data-team="1">Team 1</button>
+          <button type="button" class="pill t2" data-team="2">Team 2</button>
+        </div>
+        <div class="nav-tabs">
+          <button type="button" class="nav-tab active" data-tab="squad">Squad</button>
+          <button type="button" class="nav-tab" data-tab="ball">Ball</button>
+          <button type="button" class="nav-tab" data-tab="rank">Top</button>
+        </div>
+      </div>
+      <div class="section-label player-only player-clips-label">My clips &amp; appearances</div>
+      <div class="sidebar-scroll" id="sidebarList"></div>
+      <div class="clips-panel" id="clipsPanel">
+        <div class="clips-header">
+          <div>
+            <div class="clips-title" id="clipsTitle">Clips</div>
+            <div class="clips-summary" id="clipsSummary"></div>
+          </div>
+          <div class="clips-totals" id="clipsTotals"></div>
+        </div>
+        <div id="clipsContent"></div>
+      </div>
+    </aside>
+
+    <main class="video-stage">
+      <div class="video-shell">
+        <div class="video-box" id="videoBox">
+          <div class="video-surface" id="videoSurface">
+            <video id="v" src="/video" playsinline preload="auto"></video>
+            <canvas id="overlayCanvas" aria-hidden="true"></canvas>
+          </div>
+          <div class="player-bar">
+            <button type="button" class="btn btn-ghost btn-icon" id="btnPlayPause" title="Play / Pause">▶</button>
+            <button type="button" class="btn btn-ghost btn-icon" id="btnStop" title="Stop">■</button>
+            <button type="button" class="btn btn-ghost btn-icon" id="btnPrevFrame" title="Previous frame">−1f</button>
+            <button type="button" class="btn btn-ghost btn-icon" id="btnNextFrame" title="Next frame">+1f</button>
+            <input type="range" id="seek" min="0" max="1" step="any" value="0" aria-label="Seek" />
+            <span class="time-readout" id="timeReadout">0:00 / 0:00</span>
+            <span class="frame-readout" id="frameReadout">f0</span>
+            <span class="status" id="status"></span>
+          </div>
+        </div>
+      </div>
+      <p class="shortcuts-hint">
+        <kbd>Space</kbd> play/pause · <kbd>Esc</kbd> clear selection · Clip click = spotlight (blur) · Play = normal + ellipse
+      </p>
+    </main>
+
+    <aside class="insights" id="insightsPanel">
+      <div class="insights-header">
+        <h2 id="insightsTitle">Match Overview</h2>
+        <p id="insightsSubtitle">Live stats from tracking data</p>
+      </div>
+      <div class="team-pills insights-team-pills coach-only" id="insightsTeamPills">
+        <span class="team-pills-label">View team</span>
+        <button type="button" class="pill t1 active" data-team="1">Team 1</button>
+        <button type="button" class="pill t2" data-team="2">Team 2</button>
+      </div>
+      <div class="insights-body" id="insightsBody"></div>
+    </aside>
+  </div>
+
+  <div class="analytics-overlay" id="analyticsOverlay" role="dialog" aria-modal="true" aria-labelledby="analyticsTitle">
+    <div class="ax-topbar">
+      <div>
+        <h2 id="analyticsTitle">Analytics</h2>
+        <p id="analyticsSubtitle">Match intelligence</p>
+      </div>
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-ghost" id="btnAnalyticsClose">Close</button>
+    </div>
+    <div class="ax-body" id="analyticsBody"></div>
+  </div>
+
+  <script src="/static/analytics.js?v=5"></script>
+  <script>
+    const APP_USER = {{ current_user | tojson }};
+    const IS_COACH = APP_USER.role === 'coach';
+    const IS_PLAYER = APP_USER.role === 'player';
+    const MAX_FRAME = {{ max_frame }};
+    const FPS = {{ fps }};
+    const FRAME_TIMES = {{ frame_times | tojson }};
+    const video = document.getElementById('v');
+    const statusEl = document.getElementById('status');
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const btnStop = document.getElementById('btnStop');
+    const btnPrevFrame = document.getElementById('btnPrevFrame');
+    const btnNextFrame = document.getElementById('btnNextFrame');
+    const seek = document.getElementById('seek');
+    const timeReadout = document.getElementById('timeReadout');
+    const frameReadout = document.getElementById('frameReadout');
+    const videoBox = document.getElementById('videoBox');
+    const overlayCanvas = document.getElementById('overlayCanvas');
+    const overlayCtx = overlayCanvas.getContext('2d');
+    const sidebarList = document.getElementById('sidebarList');
+    const clipsPanel = document.getElementById('clipsPanel');
+    const clipsTitle = document.getElementById('clipsTitle');
+    const clipsSummary = document.getElementById('clipsSummary');
+    const clipsTotals = document.getElementById('clipsTotals');
+    const clipsContent = document.getElementById('clipsContent');
+    const insightsBody = document.getElementById('insightsBody');
+    const insightsTitle = document.getElementById('insightsTitle');
+    const insightsSubtitle = document.getElementById('insightsSubtitle');
+    const playerSearch = document.getElementById('playerSearch');
+
+    let seekDragging = false;
+    let highlight = null;
+    let spotlight = null;
+    let framePlayersCache = new Map();
+    let frameFetchPending = null;
+    let rafOverlay = 0;
+
+    let matchOverview = null;
+    let rosterStats = [];
+    let ballData = null;
+    let currentTab = 'squad';
+    let teamFilter = 1;
+    let selectedPlayer = null;
+
+    function teamDisplayName(teamId) {
+      const t = (matchOverview?.teams || []).find(x => x.team_id === teamId);
+      if (t?.team_name) {
+        const n = t.team_name;
+        return n.length > 22 ? n.slice(0, 20) + '…' : n;
+      }
+      return teamId === 1 ? 'Team 1' : 'Team 2';
+    }
+
+    function syncTeamPillUI() {
+      document.querySelectorAll('#sidebarTeamPills .pill, #insightsTeamPills .pill').forEach(btn => {
+        const tid = parseInt(btn.dataset.team, 10);
+        btn.classList.toggle('active', tid === teamFilter);
+      });
+    }
+
+    function updateTeamPillLabels() {
+      document.querySelectorAll('#sidebarTeamPills .pill, #insightsTeamPills .pill').forEach(btn => {
+        const tid = parseInt(btn.dataset.team, 10);
+        btn.textContent = teamDisplayName(tid);
+        btn.title = (matchOverview?.teams || []).find(x => x.team_id === tid)?.team_name || btn.textContent;
+      });
+    }
+
+    window.getCoachTeamFilter = () => teamFilter;
+    window.setCoachTeamFilter = (teamId) => {
+      if (teamId !== 1 && teamId !== 2) return;
+      teamFilter = teamId;
+      syncTeamPillUI();
+      renderSidebar();
+      if (!selectedPlayer) renderMatchInsights();
+    };
+
+    const TEAM_COLORS = { 1: 't1', 2: 't2' };
+    const TEAM_ELLIPSE_STROKE = { 1: '#f8fafc', 2: '#22c55e' };
+    const TEAM_ELLIPSE_FILL = { 1: '#f8fafc', 2: '#22c55e' };
+
+    function applyRoleUI() {
+      const pill = document.getElementById('userPill');
+      if (pill) pill.textContent = APP_USER.display_name || (IS_COACH ? 'Coach' : 'Player');
+      if (IS_PLAYER) {
+        document.body.classList.add('mode-player');
+        teamFilter = APP_USER.team_id;
+        insightsTitle.textContent = 'My Performance';
+        insightsSubtitle.textContent = APP_USER.team_name || '';
+      }
+    }
+
+    // ─── Data loading ───
+    async function initApp() {
+      applyRoleUI();
+      if (IS_COACH) {
+        const [overview, roster, ball] = await Promise.all([
+          fetch('/api/match_overview').then(r => r.json()),
+          fetch('/api/roster_stats').then(r => r.json()),
+          fetch('/api/ball_possession').then(r => r.json()),
+        ]);
+        matchOverview = overview;
+        rosterStats = roster.players || [];
+        ballData = ball;
+        updateTeamPillLabels();
+        syncTeamPillUI();
+        renderMatchInsights();
+        renderSidebar();
+        playerSearch.addEventListener('input', () => renderSidebar());
+        document.querySelectorAll('.nav-tab').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentTab = btn.dataset.tab;
+            renderSidebar();
+          });
+        });
+        document.querySelectorAll('#sidebarTeamPills .pill, #insightsTeamPills .pill').forEach(btn => {
+          btn.addEventListener('click', () => {
+            window.setCoachTeamFilter(parseInt(btn.dataset.team, 10));
+          });
+        });
+      } else {
+        const [roster, ball] = await Promise.all([
+          fetch('/api/roster_stats').then(r => r.json()),
+          fetch('/api/ball_possession').then(r => r.json()),
+        ]);
+        rosterStats = roster.players || [];
+        ballData = ball;
+        renderPlayerInsightsOnly();
+        renderPlayerSidebar();
+        clipsPanel.classList.add('open');
+        await selectPlayer(APP_USER.team_id, APP_USER.jersey_number);
+      }
+    }
+
+    function renderPlayerInsightsOnly() {
+      const p = rosterStats[0];
+      if (!p) {
+        insightsBody.innerHTML = '<div class="empty-msg">No tracking data for your jersey in this match.</div>';
+        return;
+      }
+      renderPlayerInsights(APP_USER.team_id, APP_USER.jersey_number);
+    }
+
+    function renderPlayerSidebar() {
+      sidebarList.innerHTML = '';
+      const p = rosterStats[0];
+      if (p) {
+        const block = document.createElement('div');
+        block.className = 'team-section';
+        const head = document.createElement('div');
+        head.className = 'team-section-header';
+        head.innerHTML = '<span>My stats</span>';
+        block.appendChild(head);
+        const colHead = document.createElement('div');
+        colHead.className = 'list-col-head';
+        colHead.innerHTML = '<span>#</span><span>Player</span><span>Pitch</span><span>Ball</span>';
+        block.appendChild(colHead);
+        const card = makePlayerCard(p);
+        if (card) block.appendChild(card);
+        sidebarList.appendChild(block);
+      }
+      const teams = (ballData && ballData.teams) || [];
+      const myCarriers = [];
+      teams.forEach(team => {
+        (team.carriers || []).forEach(c => {
+          myCarriers.push({ ...c, team_id: team.team_id });
+        });
+      });
+      if (myCarriers.length) {
+        const ballBlock = document.createElement('div');
+        ballBlock.className = 'team-section';
+        const h = document.createElement('div');
+        h.className = 'team-section-header';
+        h.innerHTML = '<span>Ball touches</span><span class="team-count">' + myCarriers.length + '</span>';
+        ballBlock.appendChild(h);
+        myCarriers.forEach(c => {
+          const row = document.createElement('div');
+          row.className = 'player-card';
+          row.innerHTML = `
+            <div class="jersey-badge ball">⚽</div>
+            <div class="player-card-body">
+              <div class="player-card-name">${escapeHtml(c.label)}</div>
+              <div class="player-card-meta">${c.touch_count} touch(es)</div>
+            </div>
+            <div class="stat-cell pitch empty">—</div>
+            <div class="stat-cell ball">${formatSecShort(c.total_sec)}</div>`;
+          row.addEventListener('click', () => selectPlayer(c.team_id, c.jersey_number, c));
+          ballBlock.appendChild(row);
+        });
+        sidebarList.appendChild(ballBlock);
+      }
+    }
+
+    function renderMatchInsights() {
+      if (!IS_COACH || !matchOverview) return;
+      const o = matchOverview;
+      const tid = teamFilter;
+      const team = (o.teams || []).find(t => t.team_id === tid) || {};
+      const t1 = (o.teams || []).find(t => t.team_id === 1) || {};
+      const t2 = (o.teams || []).find(t => t.team_id === 2) || {};
+      const p1 = t1.possession_pct ?? 50;
+      const p2 = t2.possession_pct ?? (100 - p1);
+      const teamPoss = tid === 1 ? p1 : p2;
+      const dotClass = tid === 1 ? 't1' : 't2';
+
+      const carriers = (o.top_ball_carriers || []).filter(p => p.team_id === tid).slice(0, 8);
+      const pitchTop = (o.top_pitch_time || []).filter(p => p.team_id === tid).slice(0, 8);
+
+      let timelineHtml = '';
+      if (o.possession_timeline && o.possession_timeline.length) {
+        timelineHtml = '<div class="timeline-chart">' +
+          o.possession_timeline.map(pt => {
+            const h = Math.max(8, pt.team1_pct / 2);
+            return `<div class="timeline-bar" style="height:${h}px" title="${formatTime(pt.time)} — ${pt.team1_pct}%"></div>`;
+          }).join('') + '</div>';
+      }
+
+      insightsTitle.textContent = team.team_name || ('Team ' + tid);
+      insightsSubtitle.textContent = 'Team report · switch team above';
+
+      insightsBody.innerHTML = `
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Match length</div>
+            <div class="stat-value">${o.duration_fmt || '—'}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Team possession</div>
+            <div class="stat-value sm">${teamPoss}%</div>
+          </div>
+          <div class="stat-card wide">
+            <div class="stat-label">Match possession (both teams)</div>
+            <div class="possession-bar">
+              <div class="t1" style="width:${p1}%"></div>
+              <div class="t2" style="width:${p2}%"></div>
+            </div>
+            <div class="stat-sub" style="margin-top:8px">${escapeHtml(t1.team_name || 'T1')}: ${p1}% · ${escapeHtml(t2.team_name || 'T2')}: ${p2}%</div>
+            ${timelineHtml}
+          </div>
+        </div>
+        <div class="team-block">
+          <h3><span class="dot ${dotClass}"></span>${escapeHtml(team.team_name || ('Team ' + tid))}</h3>
+          <div class="team-row"><span>Players tracked</span><span>${team.active_players ?? '—'}</span></div>
+          <div class="team-row"><span>Ball touches</span><span>${team.ball_touches ?? 0}</span></div>
+          <div class="team-row"><span>Time on ball</span><span>${team.ball_touch_sec ?? 0}s</span></div>
+        </div>
+        <div class="section-label" style="padding:0">Top ball carriers (this team)</div>
+        <ul class="rank-list">${carriers.length ? carriers.map((p, i) => rankItemHtml(p, i, 'touch')).join('') : '<li class="empty-msg" style="padding:12px">No ball data</li>'}</ul>
+        <div class="section-label" style="padding:0">Most pitch time (this team)</div>
+        <ul class="rank-list">${pitchTop.length ? pitchTop.map((p, i) => rankItemHtml(p, i, 'pitch')).join('') : '<li class="empty-msg" style="padding:12px">No pitch data</li>'}</ul>
+      `;
+      insightsBody.querySelectorAll('.rank-item').forEach(el => {
+        el.addEventListener('click', () => {
+          selectPlayer(parseInt(el.dataset.team, 10), parseInt(el.dataset.jersey, 10));
+        });
+      });
+    }
+
+    function rankItemHtml(p, i, type) {
+      const val = type === 'touch'
+        ? (p.ball_touch_sec != null ? p.ball_touch_sec + 's' : p.ball_touches)
+        : (p.pitch_time_sec + 's');
+      return `<li class="rank-item" data-team="${p.team_id}" data-jersey="${p.jersey_number}">
+        <span class="rank-num">${i + 1}</span>
+        <span class="rank-info"><div class="rank-name">${escapeHtml(p.label || '#' + p.jersey_number)}</div></span>
+        <span class="rank-val">${val}</span>
+      </li>`;
+    }
+
+    function renderSidebar() {
+      if (IS_PLAYER) {
+        renderPlayerSidebar();
+        return;
+      }
+      const q = (playerSearch && playerSearch.value || '').trim().toLowerCase();
+      sidebarList.innerHTML = '';
+
+      if (currentTab === 'squad') {
+        let list = rosterStats.filter(p => p.team_id === teamFilter);
+        if (q) {
+          list = list.filter(p =>
+            String(p.jersey_number).includes(q) ||
+            (p.name || '').toLowerCase().includes(q) ||
+            (p.position || '').toLowerCase().includes(q)
+          );
+        }
+        list.sort((a, b) => {
+          if (a.detected !== b.detected) return a.detected ? -1 : 1;
+          return (b.pitch_time_sec || 0) - (a.pitch_time_sec || 0);
+        });
+        if (!list.length) {
+          sidebarList.innerHTML = '<div class="empty-msg">No players match your search.</div>';
+          return;
+        }
+        const teamBlock = document.createElement('div');
+        teamBlock.className = 'team-section';
+        const head = document.createElement('div');
+        head.className = 'team-section-header';
+        const tname = list[0]?.team_name || teamDisplayName(teamFilter);
+        head.innerHTML = `<span>${escapeHtml(tname)}</span><span class="team-count">${list.length} players</span>`;
+        teamBlock.appendChild(head);
+        const colHead = document.createElement('div');
+        colHead.className = 'list-col-head';
+        colHead.innerHTML = '<span>#</span><span>Player</span><span>Pitch</span><span>Ball</span>';
+        teamBlock.appendChild(colHead);
+        list.forEach(p => {
+          const card = makePlayerCard(p);
+          if (card) teamBlock.appendChild(card);
+        });
+        sidebarList.appendChild(teamBlock);
+      } else if (currentTab === 'ball') {
+        renderBallSidebar(q);
+      } else {
+        renderRankSidebar(q);
+      }
+    }
+
+    function makePlayerCard(p, onSelect) {
+      p = enrichFromRoster(p);
+      if (!p.jersey_number || !p.name) return null;
+      const el = document.createElement('div');
+      const sel = selectedPlayer && selectedPlayer.team_id === p.team_id && selectedPlayer.jersey_number === p.jersey_number;
+      el.className = 'player-card' + (sel ? ' selected' : '') + (p.detected === false ? ' not-detected' : '');
+      const tc = TEAM_COLORS[p.team_id] || 't1';
+      const pitch = p.pitch_time_sec > 0 ? formatMin(p.pitch_time_sec) : '—';
+      const ball = p.ball_touch_sec > 0 ? formatSecShort(p.ball_touch_sec) : '—';
+      const metaParts = [];
+      if (p.position) metaParts.push(p.position);
+      if (p.on_pitch_pct > 0) metaParts.push(p.on_pitch_pct + '% match');
+      if (!p.detected) metaParts.push('not in video');
+      else if (!metaParts.length) metaParts.push('tracked');
+      el.innerHTML = `
+        <div class="jersey-badge ${tc}">${p.jersey_number}</div>
+        <div class="player-card-body">
+          <div class="player-card-name">${escapeHtml(p.name || 'Unknown')}</div>
+          <div class="player-card-meta">${escapeHtml(metaParts.join(' · '))}</div>
+        </div>
+        <div class="stat-cell pitch ${pitch === '—' ? 'empty' : ''}">${pitch}</div>
+        <div class="stat-cell ball ${ball === '—' ? 'empty' : ''}">${ball}</div>
+      `;
+      el.addEventListener('click', () => {
+        if (onSelect) onSelect();
+        else selectPlayer(p.team_id, p.jersey_number);
+      });
+      return el;
+    }
+
+    function renderBallSidebar(q) {
+      const teams = (ballData && ballData.teams) || [];
+      let any = false;
+      teams.forEach(team => {
+        let carriers = team.carriers || [];
+        if (teamFilter && team.team_id !== teamFilter) return;
+        if (q) {
+          carriers = carriers.filter(c =>
+            (c.label || '').toLowerCase().includes(q) ||
+            String(c.jersey_number || '').includes(q)
+          );
+        }
+        if (!carriers.length) return;
+        any = true;
+        carriers.sort((a, b) => (b.total_sec || 0) - (a.total_sec || 0));
+        const teamBlock = document.createElement('div');
+        teamBlock.className = 'team-section';
+        const head = document.createElement('div');
+        head.className = 'team-section-header';
+        head.innerHTML = `<span>${escapeHtml(team.team_name)}</span><span class="team-count">${carriers.length} carriers</span>`;
+        teamBlock.appendChild(head);
+        const colHead = document.createElement('div');
+        colHead.className = 'list-col-head';
+        colHead.innerHTML = '<span>#</span><span>Player</span><span>Pitch</span><span>Ball</span>';
+        teamBlock.appendChild(colHead);
+        sidebarList.appendChild(teamBlock);
+        carriers.forEach(c => {
+          const p = enrichFromRoster({
+            team_id: team.team_id,
+            jersey_number: c.jersey_number,
+            name: c.name || c.label,
+            position: null,
+            detected: true,
+            ball_touch_sec: c.total_sec,
+            ball_touches: c.touch_count,
+          });
+          const card = makePlayerCard(p, () => selectPlayer(team.team_id, c.jersey_number, c));
+          if (card) teamBlock.appendChild(card);
+        });
+      });
+      if (!any) sidebarList.innerHTML = '<div class="empty-msg">No ball carriers found.</div>';
+    }
+
+    function renderRankSidebar(q) {
+      let list = rosterStats.filter(
+        p => p.team_id === teamFilter && (p.ball_touch_sec > 0 || p.pitch_time_sec > 0)
+      );
+      if (q) list = list.filter(p => (p.name || '').toLowerCase().includes(q) || String(p.jersey_number).includes(q));
+      list.sort((a, b) => b.ball_touch_sec - a.ball_touch_sec || b.pitch_time_sec - a.pitch_time_sec);
+      list = list.slice(0, 25);
+      if (!list.length) {
+        sidebarList.innerHTML = '<div class="empty-msg">No ranked players for this team.</div>';
+        return;
+      }
+      const block = document.createElement('div');
+      block.className = 'team-section';
+      const head = document.createElement('div');
+      head.className = 'team-section-header';
+      head.innerHTML = '<span>Top · ' + escapeHtml(teamDisplayName(teamFilter)) + '</span><span class="team-count">' + list.length + '</span>';
+      block.appendChild(head);
+      const colHead = document.createElement('div');
+      colHead.className = 'list-col-head';
+      colHead.innerHTML = '<span>#</span><span>Player</span><span>Pitch</span><span>Ball</span>';
+      block.appendChild(colHead);
+      list.forEach(p => {
+        const card = makePlayerCard(p);
+        if (card) block.appendChild(card);
+      });
+      sidebarList.appendChild(block);
+    }
+
+    async function selectPlayer(teamId, jerseyNumber, carrierPrefill) {
+      selectedPlayer = { team_id: teamId, jersey_number: jerseyNumber };
+      if (IS_COACH && teamId !== teamFilter) {
+        teamFilter = teamId;
+        syncTeamPillUI();
+      }
+      renderSidebar();
+      renderPlayerInsights(teamId, jerseyNumber);
+      const prof = lookupRoster(teamId, jerseyNumber);
+      clipsPanel.classList.add('open');
+      clipsTitle.textContent = 'Loading clips…';
+      if (clipsSummary) clipsSummary.textContent = '';
+      if (clipsTotals) clipsTotals.innerHTML = '';
+      clipsContent.innerHTML = '<span class="loading-spinner"></span>';
+
+      let segments, label, trackId;
+      if (carrierPrefill && carrierPrefill.segments) {
+        segments = carrierPrefill.segments;
+        label = carrierPrefill.label;
+        trackId = carrierPrefill.track_id;
+      } else {
+        const r = await fetch(`/api/player_times/${teamId}/${jerseyNumber}`);
+        const data = await r.json();
+        segments = data.segments || [];
+        label = data.label;
+        trackId = segments[0] && segments[0].track_id;
+      }
+
+      setHighlight({
+        track_id: trackId || (segments[0] && segments[0].track_id) || (prof && prof.track_id),
+        team_id: teamId,
+        jersey_number: jerseyNumber,
+        label: label || (prof ? '#' + jerseyNumber + ' ' + (prof.name || '') : '#' + jerseyNumber),
+      });
+      const profile = prof;
+      const clipTotal = sumSegmentDuration(segments);
+      clipsTitle.textContent = label || ('#' + jerseyNumber + (profile && profile.name ? ' ' + profile.name : ''));
+      if (clipsSummary) {
+        clipsSummary.textContent = segments.length + ' appearance clip' + (segments.length === 1 ? '' : 's');
+      }
+      if (clipsTotals && profile) {
+        clipsTotals.innerHTML = `<strong>${formatMin(clipTotal)}</strong>clip total<br/>
+          <span style="color:var(--text)">${formatMin(profile.pitch_time_sec)}</span> pitch ·
+          <span style="color:var(--ball)">${formatSecShort(profile.ball_touch_sec)}</span> ball`;
+      }
+      clipsContent.innerHTML = '';
+      if (!segments.length) {
+        clipsContent.innerHTML = '<div class="empty-msg">No video segments for this player.</div>';
+        if (clipsTotals) clipsTotals.innerHTML = '';
+        return;
+      }
+      const grid = document.createElement('div');
+      grid.className = 'clips-grid';
+      clipsContent.appendChild(grid);
+      renderTimestampBadges(grid, segments, {
+        label: label,
+        teamId: teamId,
+        jerseyNumber: jerseyNumber,
+        trackId: trackId || (profile && profile.track_id),
+      });
+    }
+
+    async function renderPlayerInsights(teamId, jerseyNumber) {
+      insightsTitle.textContent = 'Player Profile';
+      insightsSubtitle.textContent = '#' + jerseyNumber;
+      let p = rosterStats.find(x => x.team_id === teamId && x.jersey_number === jerseyNumber);
+      if (!p) {
+        const r = await fetch(`/api/player_profile/${teamId}/${jerseyNumber}`);
+        const data = await r.json();
+        p = data.profile;
+      }
+      const tc = teamId === 1 ? 't1' : 't2';
+      const touchPct = matchOverview && matchOverview.duration_sec > 0
+        ? Math.round(100 * (p.ball_touch_sec || 0) / (rosterStats.filter(s => s.team_id === teamId).reduce((a, s) => a + s.ball_touch_sec, 0) || 1))
+        : 0;
+
+      insightsBody.innerHTML = `
+        <div class="profile-hero">
+          <div class="profile-jersey jersey-badge ${tc}" style="width:64px;height:64px;font-size:1.4rem;margin:0 auto 12px">${jerseyNumber}</div>
+          <div class="profile-name">${escapeHtml(p.name || 'Unknown')}</div>
+          <div class="profile-pos">${escapeHtml(p.position || '—')} · ${escapeHtml(p.team_name || '')}</div>
+          <span class="tag ${p.detected ? 'detected' : 'missing'}">${p.detected ? 'Detected in match' : 'Not detected'}</span>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Pitch time</div>
+            <div class="stat-value sm">${formatMin(p.pitch_time_sec || 0)}</div>
+            <div class="stat-sub">${p.on_pitch_pct || 0}% of match</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ball touches</div>
+            <div class="stat-value sm">${p.ball_touches || 0}</div>
+            <div class="stat-sub">${p.ball_touch_sec || 0}s on ball</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Appearances</div>
+            <div class="stat-value sm">${p.pitch_segments || 0}</div>
+            <div class="stat-sub">tracked segments</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Team touch share</div>
+            <div class="stat-value sm">~${touchPct}%</div>
+            <div class="stat-sub">of team ball time</div>
+          </div>
+        </div>
+        <p style="font-size:0.78rem;color:var(--muted);line-height:1.5">
+          <strong>For coaches:</strong> Click a clip timestamp for spotlight (blur + solo player). Press Play for normal video with foot ellipse tracking.
+        </p>
+      `;
+    }
+
+    function escapeHtml(s) {
+      if (!s) return '';
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function formatMin(sec) {
+      if (!sec || sec <= 0) return '0:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.round(sec % 60);
+      return m + ':' + String(s).padStart(2, '0');
+    }
+
+    function formatSecShort(sec) {
+      if (!sec || sec <= 0) return '—';
+      if (sec < 60) return Math.round(sec * 10) / 10 + 's';
+      return formatMin(sec);
+    }
+
+    function sumSegmentDuration(segments) {
+      if (!segments || !segments.length) return 0;
+      return segments.reduce((acc, s) => acc + Math.max(0, (s.end || 0) - (s.start || 0)), 0);
+    }
+
+    function lookupRoster(teamId, jerseyNumber) {
+      return rosterStats.find(
+        p => p.team_id === teamId && p.jersey_number === jerseyNumber
+      );
+    }
+
+    function enrichFromRoster(p) {
+      const r = lookupRoster(p.team_id, p.jersey_number);
+      if (!r) return p;
+      return {
+        ...p,
+        pitch_time_sec: r.pitch_time_sec ?? p.pitch_time_sec ?? 0,
+        ball_touch_sec: p.ball_touch_sec ?? r.ball_touch_sec ?? 0,
+        ball_touches: p.ball_touches ?? r.ball_touches ?? 0,
+        on_pitch_pct: r.on_pitch_pct ?? p.on_pitch_pct,
+        name: p.name || r.name,
+        position: p.position || r.position,
+        detected: r.detected ?? p.detected,
+      };
+    }
+
+    // ─── Timestamps & foot-ellipse overlay ───
+    function renderTimestampBadges(container, segments, opts) {
+      const options = opts || {};
+      const ballStyle = !!options.ballStyle;
+      const emptyMsg = options.emptyMsg || 'No clips found.';
+      container.innerHTML = '';
+      if (!segments || !segments.length) {
+        container.innerHTML = '<div class="empty-msg">' + emptyMsg + '</div>';
+        return;
+      }
+      segments.forEach(seg => {
+        const badge = document.createElement('span');
+        badge.className = 'timestamp-badge' + (ballStyle ? ' ball' : '');
+        badge.textContent = formatTime(seg.start) + ' – ' + formatTime(seg.end);
+        badge.title = 'Spotlight this clip (paused)';
+        badge.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const trackId = seg.track_id != null ? seg.track_id : options.trackId;
+          startSpotlight({
+            track_id: trackId,
+            label: options.label,
+            team_id: options.teamId,
+            jersey_number: options.jerseyNumber,
+          }, seg);
+        });
+        container.appendChild(badge);
+      });
+    }
+
+    function setHighlight(subject) {
+      const trackId = subject.track_id;
+      const jersey = subject.jersey_number;
+      const label = subject.label || (jersey != null ? '#' + jersey : (trackId != null ? 'Track ' + trackId : 'Player'));
+      highlight = {
+        trackId,
+        teamId: subject.team_id,
+        jerseyNumber: jersey,
+        label,
+      };
+      overlayCanvas.classList.add('active');
+      setStatus('Tracking: ' + label);
+      scheduleOverlayDraw();
+    }
+
+    function clearSpotlight() {
+      if (!spotlight) return;
+      spotlight = null;
+      document.getElementById('videoSurface').classList.remove('spotlight-active');
+      if (highlight) {
+        scheduleOverlayDraw();
+        setStatus('Tracking: ' + highlight.label);
+      } else {
+        overlayCanvas.classList.remove('active');
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        setStatus('');
+      }
+    }
+
+    function clearHighlight() {
+      spotlight = null;
+      document.getElementById('videoSurface').classList.remove('spotlight-active');
+      if (!highlight) return;
+      highlight = null;
+      overlayCanvas.classList.remove('active');
+      cancelAnimationFrame(rafOverlay);
+      rafOverlay = 0;
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      setStatus('');
+    }
+
+    function startSpotlight(subject, seg) {
+      const trackId = subject.track_id;
+      const jersey = subject.jersey_number;
+      const label = subject.label || (jersey != null ? '#' + jersey : 'Player');
+      highlight = { trackId, teamId: subject.team_id, jerseyNumber: jersey, label };
+      selectedPlayer = { team_id: subject.team_id, jersey_number: jersey };
+      renderSidebar();
+      spotlight = { segStart: seg.start, segEnd: seg.end };
+      cancelAnimationFrame(rafOverlay);
+      rafOverlay = 0;
+      overlayCanvas.classList.add('active');
+      document.getElementById('videoSurface').classList.add('spotlight-active');
+      video.pause();
+      updatePlayPauseLabel();
+      setStatus('Spotlight — press Play to resume');
+
+      const run = () => {
+        prefetchFramePlayers(currentFrameIndex()).then(() => drawSpotlightFrame());
+      };
+      if (video.readyState < 2) {
+        video.addEventListener('loadeddata', () => {
+          video.addEventListener('seeked', run, { once: true });
+          video.currentTime = seg.start;
+        }, { once: true });
+        return;
+      }
+      if (Math.abs(video.currentTime - seg.start) < 0.04) {
+        run();
+        return;
+      }
+      video.addEventListener('seeked', run, { once: true });
+      video.currentTime = seg.start;
+    }
+
+    function jumpToClip(subject, seg, pauseAtStart) {
+      if (pauseAtStart) {
+        startSpotlight(subject, seg);
+        return;
+      }
+      setHighlight(subject);
+      const run = () => prefetchFramePlayers(currentFrameIndex()).then(() => drawOverlayFrame());
+      if (video.readyState < 2) {
+        video.addEventListener('loadeddata', () => {
+          video.addEventListener('seeked', run, { once: true });
+          video.currentTime = seg.start;
+        }, { once: true });
+        return;
+      }
+      if (Math.abs(video.currentTime - seg.start) < 0.04) {
+        run();
+        return;
+      }
+      video.addEventListener('seeked', run, { once: true });
+      video.currentTime = seg.start;
+    }
+
+    function playVideoNormal() {
+      clearSpotlight();
+      video.play().catch(() => {});
+    }
+
+    function videoLayoutSize() {
+      const w = video.clientWidth || 1;
+      const h = video.clientHeight || 1;
+      return { elW: w, elH: h };
+    }
+
+    function videoDisplayRect() {
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const { elW, elH } = videoLayoutSize();
+      if (!vw || !vh) return { vw: 16, vh: 9, scale: elW / 16, elW, elH, ox: 0, oy: 0, dw: elW, dh: elH };
+      const scale = Math.min(elW / vw, elH / vh);
+      const dw = vw * scale, dh = vh * scale;
+      return { vw, vh, scale, elW, elH, ox: (elW - dw) / 2, oy: (elH - dh) / 2, dw, dh };
+    }
+
+    function bboxFootDisplay(bbox, rect) {
+      const x1 = rect.ox + bbox.x1 * rect.scale;
+      const y1 = rect.oy + bbox.y1 * rect.scale;
+      const x2 = rect.ox + bbox.x2 * rect.scale;
+      const y2 = rect.oy + bbox.y2 * rect.scale;
+      const xCenter = (x1 + x2) / 2;
+      const width = Math.max(4, x2 - x1);
+      return { xCenter, y2, width, x1, y1, x2, y2 };
+    }
+
+    async function prefetchFramePlayers(frameIdx) {
+      if (framePlayersCache.has(frameIdx)) return framePlayersCache.get(frameIdx);
+      try {
+        const r = await fetch('/api/frame/' + frameIdx);
+        const data = await r.json();
+        framePlayersCache.set(frameIdx, data.players || []);
+        if (framePlayersCache.size > 120) framePlayersCache.delete(framePlayersCache.keys().next().value);
+        return data.players || [];
+      } catch { return []; }
+    }
+
+    function findPlayerRecord(players, trackId, teamId, jerseyNumber) {
+      if (!players) return null;
+      let p = null;
+      if (teamId != null && jerseyNumber != null) {
+        p = players.find(
+          pl => pl.team_id === teamId && String(pl.jersey_number) === String(jerseyNumber)
+        );
+      }
+      if (!p && trackId != null) {
+        p = players.find(pl => Number(pl.track_id) === Number(trackId));
+      }
+      return p || null;
+    }
+
+    function resizeOverlayCanvas() {
+      const { elW, elH } = videoLayoutSize();
+      const w = Math.round(elW);
+      const h = Math.round(elH);
+      if (w < 2 || h < 2) return false;
+      overlayCanvas.style.width = w + 'px';
+      overlayCanvas.style.height = h + 'px';
+      if (overlayCanvas.width !== w || overlayCanvas.height !== h) {
+        overlayCanvas.width = w;
+        overlayCanvas.height = h;
+      }
+      return true;
+    }
+
+    function formatJerseyNumber(jersey) {
+      if (jersey == null || jersey === '') return null;
+      const s = String(jersey).trim();
+      return s.startsWith('#') ? s.slice(1) : s;
+    }
+
+    function drawEllipseFoot(ctx, foot, color, jerseyNumber) {
+      // Match OpenCV draw_ellipse: semi-axes = (bbox_width, 0.35 * bbox_width)
+      const rx = foot.width;
+      const ry = 0.35 * foot.width;
+      const start = -45 * Math.PI / 180;
+      const end = 235 * Math.PI / 180;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(foot.xCenter, foot.y2, rx, ry, 0, start, end);
+      ctx.stroke();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(foot.xCenter, foot.y2, rx, ry, 0, start, end);
+      ctx.stroke();
+
+      const jerseyText = formatJerseyNumber(jerseyNumber);
+      if (jerseyText) {
+        const rw = Math.max(36, jerseyText.length * 14 + 18);
+        const rh = 20;
+        const x1r = foot.xCenter - rw / 2;
+        const y1r = foot.y2 - rh / 2 + 15;
+        ctx.fillStyle = color;
+        ctx.fillRect(x1r, y1r, rw, rh);
+        ctx.fillStyle = '#000';
+        ctx.font = '600 12px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(jerseyText, foot.xCenter, y1r + rh / 2);
+      }
+      ctx.restore();
+    }
+
+    function drawBallTriangle(ctx, foot, color) {
+      const size = Math.max(10, foot.width * 0.18);
+      const x = foot.xCenter;
+      const y = foot.y1 - size * 0.3;
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x - size * 0.55, y + size * 0.35);
+      ctx.lineTo(x + size * 0.55, y + size * 0.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    async function drawSpotlightFrame() {
+      if (!spotlight || !highlight || video.readyState < 2 || !video.videoWidth || !resizeOverlayCanvas()) return;
+      const rect = videoDisplayRect();
+      const { ox, oy, dw, dh } = rect;
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+      overlayCtx.save();
+      overlayCtx.filter = 'blur(16px) brightness(0.35)';
+      overlayCtx.drawImage(video, ox, oy, dw, dh);
+      overlayCtx.filter = 'none';
+
+      const fi = currentFrameIndex();
+      let players = framePlayersCache.get(fi);
+      if (!players) players = await prefetchFramePlayers(fi);
+      const p = findPlayerRecord(players, highlight.trackId, highlight.teamId, highlight.jerseyNumber);
+      if (p) {
+        const bbox = {
+          x1: rect.ox + p.bbox_x1 * rect.scale,
+          y1: rect.oy + p.bbox_y1 * rect.scale,
+          x2: rect.ox + p.bbox_x2 * rect.scale,
+          y2: rect.oy + p.bbox_y2 * rect.scale,
+        };
+        const pad = 10;
+        const bx1 = Math.max(ox, bbox.x1 - pad);
+        const by1 = Math.max(oy, bbox.y1 - pad);
+        const bw = Math.min(ox + dw, bbox.x2 + pad) - bx1;
+        const bh = Math.min(oy + dh, bbox.y2 + pad) - by1;
+        overlayCtx.save();
+        overlayCtx.beginPath();
+        overlayCtx.rect(bx1, by1, bw, bh);
+        overlayCtx.clip();
+        overlayCtx.drawImage(video, ox, oy, dw, dh);
+        overlayCtx.restore();
+
+        const foot = bboxFootDisplay(
+          { x1: p.bbox_x1, y1: p.bbox_y1, x2: p.bbox_x2, y2: p.bbox_y2 },
+          rect
+        );
+        const teamId = p.team_id || highlight.teamId || 1;
+        const color = TEAM_ELLIPSE_STROKE[teamId] || '#22c55e';
+        drawEllipseFoot(overlayCtx, foot, color, highlight.jerseyNumber);
+        if (p.has_ball) drawBallTriangle(overlayCtx, foot, TEAM_ELLIPSE_FILL[teamId] || color);
+      }
+      overlayCtx.restore();
+    }
+
+    async function drawOverlayFrame() {
+      if (spotlight || !highlight || video.readyState < 2 || !video.videoWidth || !resizeOverlayCanvas()) return;
+      const rect = videoDisplayRect();
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      const fi = currentFrameIndex();
+      let players = framePlayersCache.get(fi);
+      if (!players) players = await prefetchFramePlayers(fi);
+      const p = findPlayerRecord(players, highlight.trackId, highlight.teamId, highlight.jerseyNumber);
+      if (!p) return;
+
+      const bbox = { x1: p.bbox_x1, y1: p.bbox_y1, x2: p.bbox_x2, y2: p.bbox_y2 };
+      const foot = bboxFootDisplay(bbox, rect);
+      const teamId = p.team_id || highlight.teamId || 1;
+      const color = TEAM_ELLIPSE_STROKE[teamId] || '#22c55e';
+      drawEllipseFoot(overlayCtx, foot, color, highlight.jerseyNumber);
+      if (p.has_ball) drawBallTriangle(overlayCtx, foot, TEAM_ELLIPSE_FILL[teamId] || color);
+    }
+
+    function scheduleOverlayDraw() {
+      if (spotlight) return;
+      cancelAnimationFrame(rafOverlay);
+      const tick = () => {
+        if (!highlight || spotlight) return;
+        drawOverlayFrame().finally(() => {
+          if (highlight && !spotlight) rafOverlay = requestAnimationFrame(tick);
+        });
+      };
+      rafOverlay = requestAnimationFrame(tick);
+    }
+
+    function onVideoTimeForOverlay() {
+      if (!highlight || spotlight) return;
+      const fi = currentFrameIndex();
+      if (!framePlayersCache.has(fi)) {
+        if (frameFetchPending) cancelAnimationFrame(frameFetchPending);
+        frameFetchPending = requestAnimationFrame(() => {
+          frameFetchPending = null;
+          prefetchFramePlayers(fi).then(() => drawOverlayFrame());
+        });
+      }
+    }
+
+    // ─── Video controls ───
+    function setStatus(msg) {
+      statusEl.textContent = msg || '';
+      if (msg) setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = ''; }, 3000);
+    }
+
+    function formatTime(sec) {
+      if (!isFinite(sec) || sec < 0) sec = 0;
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return m + ':' + String(s).padStart(2, '0');
+    }
+
+    function syncSeekUi() {
+      const d = video.duration;
+      if (isFinite(d) && d > 0) {
+        seek.max = d;
+        if (!seekDragging) seek.value = String(video.currentTime);
+      }
+      timeReadout.textContent = formatTime(video.currentTime) + ' / ' + (isFinite(d) ? formatTime(d) : '…');
+      frameReadout.textContent = 'f' + currentFrameIndex();
+    }
+
+    function updatePlayPauseLabel() {
+      btnPlayPause.textContent = video.paused ? '▶' : '⏸';
+    }
+
+    btnPlayPause.addEventListener('click', () => {
+      if (video.paused) playVideoNormal(); else video.pause();
+      updatePlayPauseLabel();
+    });
+    btnStop.addEventListener('click', () => {
+      clearHighlight();
+      video.pause();
+      video.currentTime = 0;
+      updatePlayPauseLabel();
+      syncSeekUi();
+    });
+    btnPrevFrame.addEventListener('click', () => {
+      video.pause(); updatePlayPauseLabel();
+      video.currentTime = Math.max(0, video.currentTime - 1 / FPS);
+      syncSeekUi();
+      if (spotlight) drawSpotlightFrame();
+    });
+    btnNextFrame.addEventListener('click', () => {
+      video.pause(); updatePlayPauseLabel();
+      const end = isFinite(video.duration) ? video.duration : (MAX_FRAME + 1) / FPS;
+      video.currentTime = Math.min(end, video.currentTime + 1 / FPS);
+      syncSeekUi();
+      if (spotlight) drawSpotlightFrame();
+    });
+    seek.addEventListener('pointerdown', () => { seekDragging = true; });
+    seek.addEventListener('change', () => { seekDragging = false; syncSeekUi(); });
+    window.addEventListener('pointerup', () => { seekDragging = false; });
+    seek.addEventListener('input', () => {
+      const t = parseFloat(seek.value);
+      if (isFinite(t)) {
+        video.currentTime = t;
+      }
+      syncSeekUi();
+    });
+    video.addEventListener('play', () => {
+      clearSpotlight();
+      updatePlayPauseLabel();
+    });
+    video.addEventListener('pause', updatePlayPauseLabel);
+    video.addEventListener('timeupdate', () => {
+      if (!seekDragging) syncSeekUi();
+      onVideoTimeForOverlay();
+    });
+    window.addEventListener('resize', () => {
+      if (spotlight) drawSpotlightFrame();
+      else if (highlight) drawOverlayFrame();
+    });
+    video.addEventListener('seeked', () => {
+      syncSeekUi();
+      if (spotlight) drawSpotlightFrame();
+      else if (highlight) drawOverlayFrame();
+    });
+    video.addEventListener('loadedmetadata', () => {
+      if (video.videoWidth && video.videoHeight) {
+        videoBox.style.aspectRatio = video.videoWidth + ' / ' + video.videoHeight;
+      }
+      if (highlight) resizeOverlayCanvas();
+      syncSeekUi();
+      updatePlayPauseLabel();
+    });
+
+    function currentFrameIndex() {
+      const t = video.currentTime || 0;
+      if (!FRAME_TIMES.length) {
+        return Math.max(0, Math.min(MAX_FRAME, Math.round(t * FPS)));
+      }
+      let lo = 0;
+      let hi = FRAME_TIMES.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (FRAME_TIMES[mid] < t) lo = mid + 1;
+        else hi = mid;
+      }
+      if (lo > 0 && Math.abs(t - FRAME_TIMES[lo - 1]) <= Math.abs(t - FRAME_TIMES[lo])) {
+        return lo - 1;
+      }
+      return Math.min(lo, MAX_FRAME);
+    }
+
+    document.getElementById('btnAnalytics').addEventListener('click', () => {
+      window.PitchIQAnalytics.open({
+        isCoach: IS_COACH,
+        teamId: IS_COACH ? teamFilter : undefined,
+        onPlayerClick: (teamId, jerseyNumber) => {
+          window.PitchIQAnalytics.close();
+          if (IS_COACH) window.setCoachTeamFilter(teamId);
+          selectPlayer(teamId, jerseyNumber);
+        },
+      });
+    });
+    document.getElementById('btnAnalyticsClose').addEventListener('click', () => window.PitchIQAnalytics.close());
+    document.getElementById('analyticsOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'analyticsOverlay') window.PitchIQAnalytics.close();
+    });
+
+    document.getElementById('btnExport').addEventListener('click', () => { window.location.href = '/api/export'; });
+    document.getElementById('btnHelp').addEventListener('click', () => {
+      alert('Keyboard shortcuts:\n\nSpace — Play / Pause (exits spotlight)\nEsc — Clear selection\n\nClick a player → select for tracking\nClick a clip → spotlight (blur, paused)\nPlay → normal video + ellipse overlay');
+    });
+
+    document.addEventListener('keydown', (ev) => {
+      const tag = (ev.target && ev.target.tagName) || '';
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || ev.target?.isContentEditable;
+      if (ev.code === 'Space' && !typing) {
+        ev.preventDefault();
+        if (video.paused) playVideoNormal(); else video.pause();
+        updatePlayPauseLabel();
+      }
+      if (ev.code === 'Escape') {
+        const ax = document.getElementById('analyticsOverlay');
+        if (ax && ax.classList.contains('open')) {
+          window.PitchIQAnalytics.close();
+          return;
+        }
+        if (spotlight) {
+          clearSpotlight();
+          return;
+        }
+        if (highlight) {
+          clearHighlight();
+          selectedPlayer = null;
+          renderSidebar();
+        }
+      }
+    });
+
+    initApp();
+  </script>
+</body>
+</html>

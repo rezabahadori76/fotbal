@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in — PitchIQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #060a12;
+      --surface: #111827;
+      --border: rgba(148, 163, 184, 0.15);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #10b981;
+      --danger: #f87171;
+      --team1: #f59e0b;
+      --team2: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 30% 0%, rgba(16, 185, 129, 0.12), transparent),
+        radial-gradient(ellipse 50% 40% at 100% 100%, rgba(59, 130, 246, 0.08), transparent);
+      pointer-events: none;
+    }
+    .card {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), #059669);
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+      margin: 0 auto 12px;
+    }
+    .logo h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; }
+    .logo p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
+    .role-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      background: #0a0f18;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+    .role-tab {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .role-tab.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .field { margin-bottom: 16px; }
+    input, select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0a0f18;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    .btn-submit {
+      width: 100%;
+      margin-top: 8px;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #059669);
+      color: #022c22;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .btn-submit:hover { filter: brightness(1.08); }
+    .flash {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: var(--danger);
+    }
+    .hint {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+    .hint code {
+      font-size: 0.72rem;
+      background: #0a0f18;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--muted);
+    }
+    :root { --dim: #64748b; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">⚽</div>
+      <h1>PitchIQ</h1>
+      <p>Match video &amp; performance portal</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post" id="loginForm">
+      <input type="hidden" name="role" id="roleInput" value="coach" />
+      <div class="role-tabs">
+        <button type="button" class="role-tab active" data-role="coach">Coach</button>
+        <button type="button" class="role-tab" data-role="player">Player</button>
+      </div>
+
+      <div class="panel active" id="panel-coach">
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" placeholder="coach" />
+        </div>
+      </div>
+
+      <div class="panel" id="panel-player">
+        <div class="field">
+          <label for="team_id">Team</label>
+          <select id="team_id" name="team_id">
+            {% for t in teams %}
+            <option value="{{ t.id }}">{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="jersey_number">Jersey number</label>
+          <input type="number" id="jersey_number" name="jersey_number" min="1" max="99" placeholder="e.g. 87" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required />
+      </div>
+
+      <button type="submit" class="btn-submit">Sign in</button>
+    </form>
+
+    <p class="hint">
+      <strong>Demo accounts</strong><br />
+      Coach: <code>coach</code> / <code>coach123</code><br />
+      Player: pick team + jersey #, password <code>player123</code>
+    </p>
+  </div>
+
+  <script>
+    const roleInput = document.getElementById('roleInput');
+    const panelCoach = document.getElementById('panel-coach');
+    const panelPlayer = document.getElementById('panel-player');
+    const jerseyInput = document.getElementById('jersey_number');
+    const teamSelect = document.getElementById('team_id');
+
+    document.querySelectorAll('.role-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const role = tab.dataset.role;
+        roleInput.value = role;
+        panelCoach.classList.toggle('active', role === 'coach');
+        panelPlayer.classList.toggle('active', role === 'player');
+        jerseyInput.required = role === 'player';
+        teamSelect.required = role === 'player';
+      });
+    });
+  </script>
+</body>
+</html>

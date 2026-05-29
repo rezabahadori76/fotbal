@@ -1,0 +1,9 @@
+{
+  "secret_key": "pitchiq-change-this-secret-in-production",
+  "coach": {
+    "username": "coach",
+    "password": "coach123",
+    "display_name": "Head Coach"
+  },
+  "player_password": "player123"
+}

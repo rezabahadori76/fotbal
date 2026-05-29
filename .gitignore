@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+
+# OS
+.DS_Store
+
+# Large media & generated data (GitHub 100MB limit)
+*.mp4
+*.mp4v
+*.mp4v.bak
+*.bak
+output_video*.csv
+output_annotated.*
+
+# Keep example paths documented in README; users add their own video/CSV locally
