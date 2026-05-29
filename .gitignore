@@ -8,12 +8,6 @@ __pycache__/
 # OS
 .DS_Store
 
-# Large media & generated data (GitHub 100MB limit)
-*.mp4
-*.mp4v
-*.mp4v.bak
+# Oversized backup only (1.2GB; use your_video2.mp4 in repo)
 *.bak
-output_video*.csv
-output_annotated.*
-
-# Keep example paths documented in README; users add their own video/CSV locally
+output_annotated.mp4v*
