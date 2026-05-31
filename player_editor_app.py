@@ -227,6 +227,38 @@ def build_player_pitch_segments(
     return merged
 
 
+def build_player_track_frames(
+    frames_dict: dict[int, list[dict]],
+    team_id: int,
+    jersey_number: int,
+) -> list[dict]:
+    """Per-frame bbox rows for one roster player (compact overlay preload)."""
+    jn = str(jersey_number)
+    rows: list[dict] = []
+    for fi in sorted(frames_dict.keys()):
+        for p in frames_dict[fi]:
+            if p["team_id"] != team_id:
+                continue
+            pj = p["jersey_number"]
+            if pj is None or str(pj) != jn:
+                continue
+            rows.append(
+                {
+                    "frame_index": int(fi),
+                    "track_id": p["track_id"],
+                    "bbox_x1": p["bbox_x1"],
+                    "bbox_y1": p["bbox_y1"],
+                    "bbox_x2": p["bbox_x2"],
+                    "bbox_y2": p["bbox_y2"],
+                    "team_id": p["team_id"],
+                    "jersey_number": pj,
+                    "has_ball": p.get("has_ball", False),
+                }
+            )
+            break
+    return rows
+
+
 def _segments_from_frame_list(frame_list: list[int], fps: float, gap_frames: int = 1) -> list[dict]:
     if not frame_list:
         return []
@@ -427,6 +459,30 @@ def _fmt_duration(sec: float) -> str:
     return f"{m}:{s:02d}"
 
 
+def resolve_playback_video(video_path: Path) -> Path:
+    """Prefer all-intra copy for frame-accurate HTML5 seeking (bbox sync)."""
+    if os.environ.get("PITCHIQ_VIDEO"):
+        return video_path.resolve()
+    seek = video_path.with_name(f"{video_path.stem}_seek{video_path.suffix}")
+    if seek.is_file():
+        return seek.resolve()
+    return video_path.resolve()
+
+
+def video_native_fps(video_path: Path) -> float:
+    try:
+        import cv2
+
+        cap = cv2.VideoCapture(str(video_path))
+        fps = float(cap.get(cv2.CAP_PROP_FPS))
+        cap.release()
+        if 0 < fps <= 120:
+            return fps
+    except Exception:
+        pass
+    return 2997 / 100
+
+
 def make_app(
     video_path: Path,
     csv_path: Path,
@@ -440,6 +496,8 @@ def make_app(
     except Exception as e:
         print(f"Warning: Could not load team config: {e}")
         team_config = {}
+
+    video_path = resolve_playback_video(video_path)
 
     df = pd.read_csv(csv_path, low_memory=False)
     if "frame_index" not in df.columns:
@@ -518,8 +576,10 @@ def make_app(
     if valid.any():
         fps = float((fi_d[valid] / d[valid]).median())
         if fps <= 0 or fps > 120:
-            fps = 2997 / 100
+            fps = video_native_fps(video_path)
         ctx["fps"] = fps
+
+    ctx["video_fps"] = video_native_fps(video_path)
 
     ctx["frame_times"] = (
         df.groupby("frame_index", sort=True)["time_sec"].first().astype(float).tolist()
@@ -676,6 +736,7 @@ def make_app(
             "player_editor.html",
             max_frame=c["max_frame"],
             fps=c["fps"],
+            video_fps=c.get("video_fps", c["fps"]),
             frame_times=c["frame_times"],
             video_name=video_path.name,
             csv_name=csv_path.name,
@@ -969,6 +1030,15 @@ def make_app(
             label = f"#{jersey_number}"
 
         return jsonify({"segments": merged, "label": label, "team_id": team_id, "jersey_number": jersey_number})
+
+    @app.route("/api/player_track/<int:team_id>/<int:jersey_number>")
+    @login_required
+    def api_player_track(team_id: int, jersey_number: int):
+        if not player_can_access(team_id, jersey_number):
+            return jsonify({"error": "Forbidden"}), 403
+        c = app.config["EDITOR_CTX"]
+        frames = build_player_track_frames(c["frames"], team_id, jersey_number)
+        return jsonify({"frames": frames, "team_id": team_id, "jersey_number": jersey_number})
 
     return app
 

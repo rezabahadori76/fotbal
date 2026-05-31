@@ -906,6 +906,7 @@
     const IS_PLAYER = APP_USER.role === 'player';
     const MAX_FRAME = {{ max_frame }};
     const FPS = {{ fps }};
+    const VIDEO_FPS = {{ video_fps }};
     const FRAME_TIMES = {{ frame_times | tojson }};
     const video = document.getElementById('v');
     const statusEl = document.getElementById('status');
@@ -934,8 +935,14 @@
     let highlight = null;
     let spotlight = null;
     let framePlayersCache = new Map();
+    let playerTrackByFrame = new Map();
     let frameFetchPending = null;
     let rafOverlay = 0;
+    let rvfcHandle = 0;
+    let videoSeeking = false;
+    let pendingSnapFrame = -1;
+    let lastOverlayFrame = -1;
+    const USE_RVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
 
     let matchOverview = null;
     let rosterStats = [];
@@ -1350,6 +1357,7 @@
         trackId = segments[0] && segments[0].track_id;
       }
 
+      await loadPlayerTrack(teamId, jerseyNumber);
       setHighlight({
         track_id: trackId || (segments[0] && segments[0].track_id) || (prof && prof.track_id),
         team_id: teamId,
@@ -1546,7 +1554,7 @@
       };
       overlayCanvas.classList.add('active');
       setStatus('Tracking: ' + label);
-      scheduleOverlayDraw();
+      startVideoFrameSync();
     }
 
     function clearSpotlight() {
@@ -1554,7 +1562,7 @@
       spotlight = null;
       document.getElementById('videoSurface').classList.remove('spotlight-active');
       if (highlight) {
-        scheduleOverlayDraw();
+        startVideoFrameSync();
         setStatus('Tracking: ' + highlight.label);
       } else {
         overlayCanvas.classList.remove('active');
@@ -1568,11 +1576,122 @@
       document.getElementById('videoSurface').classList.remove('spotlight-active');
       if (!highlight) return;
       highlight = null;
+      playerTrackByFrame.clear();
+      stopVideoFrameSync();
       overlayCanvas.classList.remove('active');
-      cancelAnimationFrame(rafOverlay);
-      rafOverlay = 0;
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       setStatus('');
+    }
+
+    async function loadPlayerTrack(teamId, jerseyNumber) {
+      playerTrackByFrame.clear();
+      try {
+        const r = await fetch(`/api/player_track/${teamId}/${jerseyNumber}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        for (const row of data.frames || []) {
+          playerTrackByFrame.set(row.frame_index, row);
+        }
+      } catch (_) { /* offline / slow net — fall back to per-frame API */ }
+    }
+
+    function frameIndexFromTime(t) {
+      if (!FRAME_TIMES.length) {
+        return Math.max(0, Math.min(MAX_FRAME, Math.round(t * VIDEO_FPS)));
+      }
+      let lo = 0;
+      let hi = FRAME_TIMES.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (FRAME_TIMES[mid] < t) lo = mid + 1;
+        else hi = mid;
+      }
+      if (lo > 0 && Math.abs(t - FRAME_TIMES[lo - 1]) <= Math.abs(t - FRAME_TIMES[lo])) {
+        return lo - 1;
+      }
+      return Math.min(lo, MAX_FRAME);
+    }
+
+    function seekToFrame(fi) {
+      const idx = Math.max(0, Math.min(MAX_FRAME, fi));
+      pendingSnapFrame = idx;
+      videoSeeking = true;
+      if (FRAME_TIMES.length) video.currentTime = FRAME_TIMES[idx];
+      else video.currentTime = idx / VIDEO_FPS;
+    }
+
+    function currentFrameIndex() {
+      return frameIndexFromTime(video.currentTime || 0);
+    }
+
+    function stopVideoFrameSync() {
+      if (rvfcHandle && video.cancelVideoFrameCallback) {
+        video.cancelVideoFrameCallback(rvfcHandle);
+        rvfcHandle = 0;
+      }
+      if (rafOverlay) {
+        cancelAnimationFrame(rafOverlay);
+        rafOverlay = 0;
+      }
+    }
+
+    function startVideoFrameSync() {
+      stopVideoFrameSync();
+      if (!highlight || spotlight) return;
+      if (USE_RVFC) {
+        const onFrame = (_now, metadata) => {
+          if (!highlight || spotlight) return;
+          rvfcHandle = video.requestVideoFrameCallback(onFrame);
+          const t = metadata && metadata.mediaTime != null ? metadata.mediaTime : video.currentTime;
+          void drawOverlayForTime(t);
+        };
+        rvfcHandle = video.requestVideoFrameCallback(onFrame);
+      } else {
+        const tick = () => {
+          if (!highlight || spotlight) return;
+          void drawOverlayForTime(video.currentTime).finally(() => {
+            if (highlight && !spotlight) rafOverlay = requestAnimationFrame(tick);
+          });
+        };
+        rafOverlay = requestAnimationFrame(tick);
+      }
+    }
+
+    async function playerRecordAtFrame(fi) {
+      if (playerTrackByFrame.has(fi)) return playerTrackByFrame.get(fi);
+      let players = framePlayersCache.get(fi);
+      if (!players) players = await prefetchFramePlayers(fi);
+      return findPlayerRecord(players, highlight.trackId, highlight.teamId, highlight.jerseyNumber);
+    }
+
+    async function drawOverlayForTime(t) {
+      if (!highlight || spotlight || video.readyState < 2 || !video.videoWidth) return;
+      if (videoSeeking) return;
+      const fi = frameIndexFromTime(t);
+      if (video.paused && FRAME_TIMES.length) {
+        const target = FRAME_TIMES[fi];
+        if (Math.abs(video.currentTime - target) > 0.012) {
+          pendingSnapFrame = fi;
+          videoSeeking = true;
+          video.currentTime = target;
+          return;
+        }
+      }
+      if (!resizeOverlayCanvas()) return;
+      const p = await playerRecordAtFrame(fi);
+      if (!p || !highlight) return;
+      lastOverlayFrame = fi;
+      const rect = videoDisplayRect();
+      const foot = bboxFootDisplay(
+        { x1: p.bbox_x1, y1: p.bbox_y1, x2: p.bbox_x2, y2: p.bbox_y2 },
+        rect
+      );
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      const teamId = p.team_id || highlight.teamId || 1;
+      const color = TEAM_ELLIPSE_STROKE[teamId] || '#22c55e';
+      drawEllipseFoot(overlayCtx, foot, color, highlight.jerseyNumber);
+      if (p.has_ball) drawBallTriangle(overlayCtx, foot, TEAM_ELLIPSE_FILL[teamId] || color);
+      frameReadout.textContent = 'f' + fi;
     }
 
     function startSpotlight(subject, seg) {
@@ -1583,8 +1702,7 @@
       selectedPlayer = { team_id: subject.team_id, jersey_number: jersey };
       renderSidebar();
       spotlight = { segStart: seg.start, segEnd: seg.end };
-      cancelAnimationFrame(rafOverlay);
-      rafOverlay = 0;
+      stopVideoFrameSync();
       overlayCanvas.classList.add('active');
       document.getElementById('videoSurface').classList.add('spotlight-active');
       video.pause();
@@ -1615,7 +1733,10 @@
         return;
       }
       setHighlight(subject);
-      const run = () => prefetchFramePlayers(currentFrameIndex()).then(() => drawOverlayFrame());
+      const run = () => {
+        void drawOverlayForTime(video.currentTime);
+        startVideoFrameSync();
+      };
       if (video.readyState < 2) {
         video.addEventListener('loadeddata', () => {
           video.addEventListener('seeked', run, { once: true });
@@ -1804,48 +1925,6 @@
       overlayCtx.restore();
     }
 
-    async function drawOverlayFrame() {
-      if (spotlight || !highlight || video.readyState < 2 || !video.videoWidth || !resizeOverlayCanvas()) return;
-      const rect = videoDisplayRect();
-      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-      const fi = currentFrameIndex();
-      let players = framePlayersCache.get(fi);
-      if (!players) players = await prefetchFramePlayers(fi);
-      const p = findPlayerRecord(players, highlight.trackId, highlight.teamId, highlight.jerseyNumber);
-      if (!p) return;
-
-      const bbox = { x1: p.bbox_x1, y1: p.bbox_y1, x2: p.bbox_x2, y2: p.bbox_y2 };
-      const foot = bboxFootDisplay(bbox, rect);
-      const teamId = p.team_id || highlight.teamId || 1;
-      const color = TEAM_ELLIPSE_STROKE[teamId] || '#22c55e';
-      drawEllipseFoot(overlayCtx, foot, color, highlight.jerseyNumber);
-      if (p.has_ball) drawBallTriangle(overlayCtx, foot, TEAM_ELLIPSE_FILL[teamId] || color);
-    }
-
-    function scheduleOverlayDraw() {
-      if (spotlight) return;
-      cancelAnimationFrame(rafOverlay);
-      const tick = () => {
-        if (!highlight || spotlight) return;
-        drawOverlayFrame().finally(() => {
-          if (highlight && !spotlight) rafOverlay = requestAnimationFrame(tick);
-        });
-      };
-      rafOverlay = requestAnimationFrame(tick);
-    }
-
-    function onVideoTimeForOverlay() {
-      if (!highlight || spotlight) return;
-      const fi = currentFrameIndex();
-      if (!framePlayersCache.has(fi)) {
-        if (frameFetchPending) cancelAnimationFrame(frameFetchPending);
-        frameFetchPending = requestAnimationFrame(() => {
-          frameFetchPending = null;
-          prefetchFramePlayers(fi).then(() => drawOverlayFrame());
-        });
-      }
-    }
-
     // ─── Video controls ───
     function setStatus(msg) {
       statusEl.textContent = msg || '';
@@ -1886,14 +1965,13 @@
     });
     btnPrevFrame.addEventListener('click', () => {
       video.pause(); updatePlayPauseLabel();
-      video.currentTime = Math.max(0, video.currentTime - 1 / FPS);
+      seekToFrame(currentFrameIndex() - 1);
       syncSeekUi();
       if (spotlight) drawSpotlightFrame();
     });
     btnNextFrame.addEventListener('click', () => {
       video.pause(); updatePlayPauseLabel();
-      const end = isFinite(video.duration) ? video.duration : (MAX_FRAME + 1) / FPS;
-      video.currentTime = Math.min(end, video.currentTime + 1 / FPS);
+      seekToFrame(currentFrameIndex() + 1);
       syncSeekUi();
       if (spotlight) drawSpotlightFrame();
     });
@@ -1903,6 +1981,8 @@
     seek.addEventListener('input', () => {
       const t = parseFloat(seek.value);
       if (isFinite(t)) {
+        videoSeeking = true;
+        pendingSnapFrame = frameIndexFromTime(t);
         video.currentTime = t;
       }
       syncSeekUi();
@@ -1910,20 +1990,39 @@
     video.addEventListener('play', () => {
       clearSpotlight();
       updatePlayPauseLabel();
+      if (highlight) startVideoFrameSync();
     });
-    video.addEventListener('pause', updatePlayPauseLabel);
+    video.addEventListener('pause', () => {
+      updatePlayPauseLabel();
+      if (highlight && !spotlight) void drawOverlayForTime(video.currentTime);
+    });
     video.addEventListener('timeupdate', () => {
       if (!seekDragging) syncSeekUi();
-      onVideoTimeForOverlay();
     });
     window.addEventListener('resize', () => {
       if (spotlight) drawSpotlightFrame();
-      else if (highlight) drawOverlayFrame();
+      else if (highlight) void drawOverlayForTime(video.currentTime);
     });
     video.addEventListener('seeked', () => {
       syncSeekUi();
+      if (videoSeeking) {
+        const fi = pendingSnapFrame >= 0 ? pendingSnapFrame : currentFrameIndex();
+        pendingSnapFrame = -1;
+        videoSeeking = false;
+        if (spotlight) drawSpotlightFrame();
+        else if (highlight) {
+          const t = FRAME_TIMES.length ? FRAME_TIMES[fi] : fi / VIDEO_FPS;
+          void drawOverlayForTime(t);
+          if (!video.paused) startVideoFrameSync();
+        }
+        return;
+      }
+      lastOverlayFrame = -1;
       if (spotlight) drawSpotlightFrame();
-      else if (highlight) drawOverlayFrame();
+      else if (highlight) {
+        void drawOverlayForTime(video.currentTime);
+        if (!video.paused) startVideoFrameSync();
+      }
     });
     video.addEventListener('loadedmetadata', () => {
       if (video.videoWidth && video.videoHeight) {
@@ -1933,24 +2032,6 @@
       syncSeekUi();
       updatePlayPauseLabel();
     });
-
-    function currentFrameIndex() {
-      const t = video.currentTime || 0;
-      if (!FRAME_TIMES.length) {
-        return Math.max(0, Math.min(MAX_FRAME, Math.round(t * FPS)));
-      }
-      let lo = 0;
-      let hi = FRAME_TIMES.length - 1;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (FRAME_TIMES[mid] < t) lo = mid + 1;
-        else hi = mid;
-      }
-      if (lo > 0 && Math.abs(t - FRAME_TIMES[lo - 1]) <= Math.abs(t - FRAME_TIMES[lo])) {
-        return lo - 1;
-      }
-      return Math.min(lo, MAX_FRAME);
-    }
 
     document.getElementById('btnAnalytics').addEventListener('click', () => {
       window.PitchIQAnalytics.open({

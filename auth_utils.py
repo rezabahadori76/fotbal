@@ -129,7 +129,7 @@ def is_admin() -> bool:
 
 
 def is_coach() -> bool:
-    return session.get("role") == "coach"
+    return session.get("role") in ("coach", "admin")
 
 
 def is_player() -> bool:
@@ -153,7 +153,7 @@ def current_user_dict() -> dict[str, Any] | None:
 
 
 def player_can_access(team_id: int, jersey_number: int) -> bool:
-    if is_coach():
+    if is_coach() or is_admin():
         return True
     if is_player():
         return session.get("team_id") == team_id and session.get("jersey_number") == jersey_number

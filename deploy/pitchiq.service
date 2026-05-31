@@ -1,0 +1,26 @@
+[Unit]
+Description=PitchIQ Flask backend (Football analytics)
+After=network-online.target docker.service pm2-saeed.service
+Wants=network-online.target
+Requires=pm2-saeed.service
+
+[Service]
+Type=simple
+User=saeed
+Group=saeed
+WorkingDirectory=/opt/football/fotbal
+Environment=PYTHONUNBUFFERED=1
+Environment=ACADEMY_HUB_UPSTREAM=http://127.0.0.1:3000
+ExecStart=/opt/football/fotbal/.venv/bin/gunicorn \
+  --bind 0.0.0.0:5050 \
+  --workers 2 \
+  --threads 4 \
+  --timeout 120 \
+  --access-logfile - \
+  --error-logfile - \
+  wsgi:application
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

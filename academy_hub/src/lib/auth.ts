@@ -9,7 +9,6 @@ const authSecret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
 
 export const authOptions: NextAuthOptions = {
   secret: authSecret,
-  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

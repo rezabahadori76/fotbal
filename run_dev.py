@@ -62,9 +62,10 @@ def main() -> int:
         return 1
 
     print("Starting PitchIQ (Flask on :5050)...")
+    bind_host = os.environ.get("BIND_HOST", "0.0.0.0")
     procs.append(
         subprocess.Popen(
-            [python, "player_editor_app.py"],
+            [python, "player_editor_app.py", "--host", bind_host],
             cwd=ROOT,
         )
     )
