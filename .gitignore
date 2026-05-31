@@ -26,3 +26,4 @@ academy_hub/*.tsbuildinfo
 academy_hub/next-env.d.ts
 academy_hub/prisma/*.db
 academy_hub/prisma/*.db-journal
+*.mp4
