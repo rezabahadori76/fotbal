@@ -731,6 +731,24 @@ def make_app(
     @login_required
     def index():
         c = app.config["EDITOR_CTX"]
+        match = team_config.get("match", {})
+        games = [
+            {
+                "id": "current",
+                "title": f"{match.get('team_1', {}).get('name', 'Team 1')} vs {match.get('team_2', {}).get('name', 'Team 2')}",
+                "subtitle": f"{video_path.name} · {csv_path.name}",
+                "duration": c.get("match_overview", {}).get("duration_fmt", ""),
+                "url": url_for("match_detail", match_id="current"),
+            }
+        ]
+        return render_template("matches.html", games=games, current_user=current_user_dict())
+
+    @app.route("/matches/<match_id>")
+    @login_required
+    def match_detail(match_id: str):
+        if match_id != "current":
+            return redirect(url_for("index"))
+        c = app.config["EDITOR_CTX"]
         user = current_user_dict()
         return render_template(
             "player_editor.html",

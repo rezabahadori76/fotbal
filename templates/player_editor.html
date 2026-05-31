@@ -298,20 +298,37 @@
     }
     .list-col-head {
       display: grid;
-      grid-template-columns: 40px 1fr 52px 52px;
+      grid-template-columns: 34px minmax(72px, 1fr) 66px 66px;
       gap: 6px;
       padding: 4px 10px 6px;
-      font-size: 0.62rem;
+      font-size: 0.54rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--dim);
+      line-height: 1.15;
     }
     .list-col-head span:nth-child(3),
-    .list-col-head span:nth-child(4) { text-align: right; }
+    .list-col-head span:nth-child(4),
+    .list-col-head button:nth-child(3),
+    .list-col-head button:nth-child(4) { text-align: right; }
+    .list-col-head button {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      cursor: pointer;
+    }
+    .list-col-head button:hover,
+    .list-col-head button.active {
+      color: var(--text);
+    }
     .player-card {
       display: grid;
-      grid-template-columns: 40px 1fr 52px 52px;
+      grid-template-columns: 34px minmax(72px, 1fr) 66px 66px;
       gap: 6px;
       align-items: center;
       padding: 8px 10px;
@@ -427,6 +444,29 @@
       overflow-y: auto;
       flex: 1;
       min-height: 0;
+    }
+    .clip-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .clip-tab {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .clip-tab.active {
+      background: var(--surface-2);
+      color: var(--accent);
     }
     .clips-grid {
       display: flex;
@@ -801,7 +841,6 @@
       </div>
     </a>
     <div class="topbar-meta">
-      <span class="coach-only">{{ video_name }} · {{ csv_name }}</span>
       <span class="player-only">My match video</span>
     </div>
     <div class="topbar-actions">
@@ -824,11 +863,6 @@
           <span class="team-pills-label">Team</span>
           <button type="button" class="pill t1 active" data-team="1">Team 1</button>
           <button type="button" class="pill t2" data-team="2">Team 2</button>
-        </div>
-        <div class="nav-tabs">
-          <button type="button" class="nav-tab active" data-tab="squad">Squad</button>
-          <button type="button" class="nav-tab" data-tab="ball">Ball</button>
-          <button type="button" class="nav-tab" data-tab="rank">Top</button>
         </div>
       </div>
       <div class="section-label player-only player-clips-label">My clips &amp; appearances</div>
@@ -950,6 +984,7 @@
     let currentTab = 'squad';
     let teamFilter = 1;
     let selectedPlayer = null;
+    let rosterSort = { key: 'pitch', dir: 'desc' };
 
     function teamDisplayName(teamId) {
       const t = (matchOverview?.teams || []).find(x => x.team_id === teamId);
@@ -983,6 +1018,11 @@
       renderSidebar();
       if (!selectedPlayer) renderMatchInsights();
     };
+
+    function setInsightsTeamFilterVisible(visible) {
+      const pills = document.getElementById('insightsTeamPills');
+      if (pills) pills.hidden = !visible;
+    }
 
     const TEAM_COLORS = { 1: 't1', 2: 't2' };
     const TEAM_ELLIPSE_STROKE = { 1: '#f8fafc', 2: '#22c55e' };
@@ -1064,7 +1104,7 @@
         block.appendChild(head);
         const colHead = document.createElement('div');
         colHead.className = 'list-col-head';
-        colHead.innerHTML = '<span>#</span><span>Player</span><span>Pitch</span><span>Ball</span>';
+        colHead.innerHTML = columnHeadHtml(false);
         block.appendChild(colHead);
         const card = makePlayerCard(p);
         if (card) block.appendChild(card);
@@ -1104,6 +1144,7 @@
 
     function renderMatchInsights() {
       if (!IS_COACH || !matchOverview) return;
+      setInsightsTeamFilterVisible(true);
       const fmWrap = document.getElementById('fmPlayerLinkWrap');
       if (fmWrap) fmWrap.hidden = true;
       const o = matchOverview;
@@ -1180,6 +1221,61 @@
       </li>`;
     }
 
+    function columnHeadHtml(sortable) {
+      const labels = [
+        ['number', '#'],
+        ['player', 'Player'],
+        ['pitch', 'Camera Engaging'],
+        ['ball', 'Ball Engaging'],
+      ];
+      return labels.map(([key, label]) => {
+        const active = sortable && rosterSort.key === key;
+        const marker = active ? (rosterSort.dir === 'asc' ? ' ^' : ' v') : '';
+        if (!sortable) return `<span>${label}</span>`;
+        return `<button type="button" class="${active ? 'active' : ''}" data-sort="${key}" aria-label="Sort by ${label}">${label}${marker}</button>`;
+      }).join('');
+    }
+
+    function attachSortHandlers(container) {
+      container.querySelectorAll('[data-sort]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.sort;
+          if (rosterSort.key === key) {
+            rosterSort.dir = rosterSort.dir === 'asc' ? 'desc' : 'asc';
+          } else {
+            rosterSort.key = key;
+            rosterSort.dir = key === 'player' || key === 'number' ? 'asc' : 'desc';
+          }
+          renderSidebar();
+        });
+      });
+    }
+
+    function compareRosterPlayers(a, b) {
+      const dir = rosterSort.dir === 'asc' ? 1 : -1;
+      let result = 0;
+      if (rosterSort.key === 'number') {
+        result = (Number(a.jersey_number) || 0) - (Number(b.jersey_number) || 0);
+      } else if (rosterSort.key === 'player') {
+        result = (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+      } else if (rosterSort.key === 'ball') {
+        result = (Number(a.ball_touch_sec) || 0) - (Number(b.ball_touch_sec) || 0);
+      } else {
+        result = (Number(a.pitch_time_sec) || 0) - (Number(b.pitch_time_sec) || 0);
+      }
+      if (result !== 0) return result * dir;
+
+      const detectedTie = Number(Boolean(b.detected)) - Number(Boolean(a.detected));
+      if (detectedTie !== 0) return detectedTie;
+      const pitchTie = (Number(b.pitch_time_sec) || 0) - (Number(a.pitch_time_sec) || 0);
+      if (pitchTie !== 0) return pitchTie;
+      const ballTie = (Number(b.ball_touch_sec) || 0) - (Number(a.ball_touch_sec) || 0);
+      if (ballTie !== 0) return ballTie;
+      const nameTie = (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+      if (nameTie !== 0) return nameTie;
+      return (Number(a.jersey_number) || 0) - (Number(b.jersey_number) || 0);
+    }
+
     function renderSidebar() {
       if (IS_PLAYER) {
         renderPlayerSidebar();
@@ -1197,10 +1293,7 @@
             (p.position || '').toLowerCase().includes(q)
           );
         }
-        list.sort((a, b) => {
-          if (a.detected !== b.detected) return a.detected ? -1 : 1;
-          return (b.pitch_time_sec || 0) - (a.pitch_time_sec || 0);
-        });
+        list.sort(compareRosterPlayers);
         if (!list.length) {
           sidebarList.innerHTML = '<div class="empty-msg">No players match your search.</div>';
           return;
@@ -1214,8 +1307,9 @@
         teamBlock.appendChild(head);
         const colHead = document.createElement('div');
         colHead.className = 'list-col-head';
-        colHead.innerHTML = '<span>#</span><span>Player</span><span>Pitch</span><span>Ball</span>';
+        colHead.innerHTML = columnHeadHtml(true);
         teamBlock.appendChild(colHead);
+        attachSortHandlers(colHead);
         list.forEach(p => {
           const card = makePlayerCard(p);
           if (card) teamBlock.appendChild(card);
@@ -1281,7 +1375,7 @@
         teamBlock.appendChild(head);
         const colHead = document.createElement('div');
         colHead.className = 'list-col-head';
-        colHead.innerHTML = '<span>#</span><span>Player</span><span>Pitch</span><span>Ball</span>';
+        colHead.innerHTML = columnHeadHtml(false);
         teamBlock.appendChild(colHead);
         sidebarList.appendChild(teamBlock);
         carriers.forEach(c => {
@@ -1320,13 +1414,50 @@
       block.appendChild(head);
       const colHead = document.createElement('div');
       colHead.className = 'list-col-head';
-      colHead.innerHTML = '<span>#</span><span>Player</span><span>Pitch</span><span>Ball</span>';
+      colHead.innerHTML = columnHeadHtml(false);
       block.appendChild(colHead);
       list.forEach(p => {
         const card = makePlayerCard(p);
         if (card) block.appendChild(card);
       });
       sidebarList.appendChild(block);
+    }
+
+    function findBallCarrier(teamId, jerseyNumber) {
+      const team = ((ballData && ballData.teams) || []).find(t => Number(t.team_id) === Number(teamId));
+      if (!team) return null;
+      return (team.carriers || []).find(c => Number(c.jersey_number) === Number(jerseyNumber)) || null;
+    }
+
+    function renderClipTabs(ctx, activeTab) {
+      const isBall = activeTab === 'ball';
+      const activeSegments = isBall ? ctx.ballSegments : ctx.pitchSegments;
+      if (clipsSummary) clipsSummary.textContent = '';
+      if (clipsTotals) clipsTotals.innerHTML = '';
+
+      clipsContent.innerHTML = `
+        <div class="clip-tabs">
+          <button type="button" class="clip-tab ${!isBall ? 'active' : ''}" data-clip-tab="squad">Camera Engaging</button>
+          <button type="button" class="clip-tab ${isBall ? 'active' : ''}" data-clip-tab="ball">Ball Engaging</button>
+        </div>
+        <div class="clips-grid" id="activeClipsGrid"></div>
+      `;
+
+      clipsContent.querySelectorAll('[data-clip-tab]').forEach(btn => {
+        btn.addEventListener('click', () => renderClipTabs(ctx, btn.dataset.clipTab));
+      });
+
+      const grid = document.getElementById('activeClipsGrid');
+      renderTimestampBadges(grid, activeSegments, {
+        label: ctx.label,
+        teamId: ctx.teamId,
+        jerseyNumber: ctx.jerseyNumber,
+        trackId: isBall ? ctx.ballTrackId : ctx.pitchTrackId,
+        ballStyle: isBall,
+        emptyMsg: isBall
+          ? 'No ball possession clips for this player.'
+          : 'No camera detection clips for this player.',
+      });
     }
 
     async function selectPlayer(teamId, jerseyNumber, carrierPrefill) {
@@ -1344,57 +1475,56 @@
       if (clipsTotals) clipsTotals.innerHTML = '';
       clipsContent.innerHTML = '<span class="loading-spinner"></span>';
 
-      let segments, label, trackId;
+      let pitchSegments, label, trackId;
       if (carrierPrefill && carrierPrefill.segments) {
-        segments = carrierPrefill.segments;
         label = carrierPrefill.label;
         trackId = carrierPrefill.track_id;
-      } else {
-        const r = await fetch(`/api/player_times/${teamId}/${jerseyNumber}`);
-        const data = await r.json();
-        segments = data.segments || [];
-        label = data.label;
-        trackId = segments[0] && segments[0].track_id;
       }
+      const r = await fetch(`/api/player_times/${teamId}/${jerseyNumber}`);
+      const data = await r.json();
+      pitchSegments = data.segments || [];
+      label = label || data.label;
+      trackId = trackId || (pitchSegments[0] && pitchSegments[0].track_id);
+      const ballCarrier = carrierPrefill && carrierPrefill.segments
+        ? carrierPrefill
+        : findBallCarrier(teamId, jerseyNumber);
+      const ballSegments = (ballCarrier && ballCarrier.segments) || [];
+      const ballTrackId = ballCarrier && ballCarrier.track_id;
 
       await loadPlayerTrack(teamId, jerseyNumber);
       setHighlight({
-        track_id: trackId || (segments[0] && segments[0].track_id) || (prof && prof.track_id),
+        track_id: trackId || (pitchSegments[0] && pitchSegments[0].track_id) || ballTrackId || (prof && prof.track_id),
         team_id: teamId,
         jersey_number: jerseyNumber,
         label: label || (prof ? '#' + jerseyNumber + ' ' + (prof.name || '') : '#' + jerseyNumber),
       });
       const profile = prof;
-      const clipTotal = sumSegmentDuration(segments);
       clipsTitle.textContent = label || ('#' + jerseyNumber + (profile && profile.name ? ' ' + profile.name : ''));
-      if (clipsSummary) {
-        clipsSummary.textContent = segments.length + ' appearance clip' + (segments.length === 1 ? '' : 's');
-      }
-      if (clipsTotals && profile) {
-        clipsTotals.innerHTML = `<strong>${formatMin(clipTotal)}</strong>clip total<br/>
-          <span style="color:var(--text)">${formatMin(profile.pitch_time_sec)}</span> pitch ·
-          <span style="color:var(--ball)">${formatSecShort(profile.ball_touch_sec)}</span> ball`;
-      }
-      clipsContent.innerHTML = '';
-      if (!segments.length) {
-        clipsContent.innerHTML = '<div class="empty-msg">No video segments for this player.</div>';
-        if (clipsTotals) clipsTotals.innerHTML = '';
-        return;
-      }
-      const grid = document.createElement('div');
-      grid.className = 'clips-grid';
-      clipsContent.appendChild(grid);
-      renderTimestampBadges(grid, segments, {
+      renderClipTabs({
+        teamId,
+        jerseyNumber,
         label: label,
-        teamId: teamId,
-        jerseyNumber: jerseyNumber,
-        trackId: trackId || (profile && profile.track_id),
-      });
+        profile,
+        pitchSegments,
+        ballSegments,
+        pitchTrackId: trackId || (profile && profile.track_id),
+        ballTrackId,
+      }, 'squad');
+      if (pitchSegments.length) {
+        const firstSegment = pitchSegments[0];
+        startSpotlight({
+          track_id: firstSegment.track_id != null ? firstSegment.track_id : (trackId || (profile && profile.track_id)),
+          label: label || (profile ? '#' + jerseyNumber + ' ' + (profile.name || '') : '#' + jerseyNumber),
+          team_id: teamId,
+          jersey_number: jerseyNumber,
+        }, firstSegment);
+      }
     }
 
     async function renderPlayerInsights(teamId, jerseyNumber) {
       insightsTitle.textContent = 'Player Profile';
       insightsSubtitle.textContent = '#' + jerseyNumber;
+      setInsightsTeamFilterVisible(false);
       const fmWrap = document.getElementById('fmPlayerLinkWrap');
       const fmLink = document.getElementById('fmPlayerLink');
       if (fmWrap) fmWrap.hidden = true;
