@@ -1,4 +1,4 @@
-"""Sign in to Football Manager (Academy Hub) from the PitchIQ Flask app."""
+"""Sign in to Soccer Manager (Academy Hub) from the PitchIQ Flask app."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def academy_hub_login(
     """
     Authenticate against NextAuth on the upstream Next.js server.
 
-    Football Manager uses the demo password server-side when none is supplied.
+    Soccer Manager uses the demo password server-side when none is supplied.
 
     Returns (home_path e.g. /hub/admin, raw Set-Cookie header values, error message).
     """
@@ -47,7 +47,7 @@ def academy_hub_login(
         csrf_body = opener.open(csrf_req, timeout=20).read()
         csrf = json.loads(csrf_body)["csrfToken"]
     except (urllib.error.URLError, KeyError, json.JSONDecodeError) as exc:
-        return None, [], f"Football Manager is not running ({exc}). Start with: python run_dev.py"
+        return None, [], f"Soccer Manager is not running ({exc}). Start with: python run_dev.py"
 
     payload = urllib.parse.urlencode(
         {
@@ -73,7 +73,7 @@ def academy_hub_login(
     except urllib.error.HTTPError:
         return None, [], "Invalid email or password."
     except (urllib.error.URLError, json.JSONDecodeError) as exc:
-        return None, [], f"Football Manager login failed ({exc})."
+        return None, [], f"Soccer Manager login failed ({exc})."
 
     session_cookies = [c for c in jar if c.name == "next-auth.session-token"]
     if not session_cookies:
@@ -111,7 +111,7 @@ def lookup_fm_player(
     jersey_number: int,
     name: str | None = None,
 ) -> dict | None:
-    """Resolve a PitchIQ jersey number to a Football Manager player profile."""
+    """Resolve a PitchIQ jersey number to a Soccer Manager player profile."""
     hub = _hub_base(upstream_base)
     params: dict[str, str] = {"jerseyNo": str(jersey_number)}
     if name:
@@ -137,7 +137,7 @@ def ensure_fm_player(
     position: str | None = None,
     squad: str | None = None,
 ) -> dict | None:
-    """Find or create a Football Manager player profile from PitchIQ data."""
+    """Find or create a Soccer Manager player profile from PitchIQ data."""
     existing = lookup_fm_player(upstream_base, jersey_number, name)
     if existing:
         return existing

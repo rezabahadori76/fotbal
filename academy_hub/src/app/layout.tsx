@@ -3,7 +3,7 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Academy Hub — Football Academy Dashboard",
+  title: "Academy Hub — Soccer Academy Dashboard",
   description: "Coach your squad with 4-option check-ins and player statistics",
 };
 

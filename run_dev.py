@@ -73,7 +73,7 @@ def main() -> int:
     print()
     print("Start here (PitchIQ / fotbal_ui):")
     print(f"  {PITCHIQ_URL}")
-    print("After sign-in, use the Football Manager button in the top bar (/hub).")
+    print("After sign-in, use the Soccer Manager button in the top bar (/hub).")
     print()
     print("Press Ctrl+C to stop both servers.")
 

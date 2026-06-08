@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PitchIQ — Match Analysis</title>
+  <title>PitchIQ — Game Analysis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -101,13 +101,39 @@
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
+    .topbar-start {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+      flex: 1;
+    }
+    .match-header-info {
+      min-width: 0;
+      padding-left: 18px;
+      border-left: 1px solid var(--border);
+    }
+    .match-banner-teams {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.35;
+      max-width: min(52vw, 720px);
+    }
+    .match-banner-date {
+      margin-top: 2px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
     .topbar-meta {
       flex: 1;
-      font-size: 0.8rem;
+      min-width: 0;
+    }
+    .topbar-meta .player-only {
+      font-size: 0.75rem;
       color: var(--dim);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
     .topbar-actions { display: flex; gap: 8px; align-items: center; }
 
@@ -237,10 +263,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 0.75rem;
-    }
-    .insights-team-pills {
-      padding: 0 16px 12px;
-      border-bottom: 1px solid var(--border);
     }
     .pill {
       flex: 1;
@@ -833,20 +855,26 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/">
-      <div class="brand-icon">⚽</div>
-      <div>
-        <h1>PitchIQ</h1>
-        <span>Match Intelligence</span>
+    <div class="topbar-start">
+      <a class="brand" href="/">
+        <div class="brand-icon">⚽</div>
+        <div>
+          <h1>PitchIQ</h1>
+          <span>Game Intelligence</span>
+        </div>
+      </a>
+      <div class="match-header-info">
+        <div class="match-banner-teams">{{ match_title }}</div>
+        <div class="match-banner-date">{{ match_date }}</div>
       </div>
-    </a>
+    </div>
     <div class="topbar-meta">
-      <span class="player-only">My match video</span>
+      <span class="player-only">My game video</span>
     </div>
     <div class="topbar-actions">
       <span class="user-pill" id="userPill" title="Signed in"></span>
       <button type="button" class="btn btn-ghost" id="btnAnalytics" title="Analytics &amp; reports">📊 Analytics</button>
-      <a href="{{ academy_dashboard_url }}" class="btn btn-ghost" title="Questions, assignments, and player responses">Football Manager</a>
+      <a href="{{ academy_dashboard_url }}" class="btn btn-ghost" title="Questions, assignments, and player responses">Soccer Manager</a>
       <button type="button" class="btn btn-ghost coach-only" id="btnHelp" title="Keyboard shortcuts">?</button>
       <button type="button" class="btn btn-primary coach-only" id="btnExport">Export CSV</button>
       <a href="/logout" class="btn btn-ghost">Logout</a>
@@ -905,16 +933,11 @@
 
     <aside class="insights" id="insightsPanel">
       <div class="insights-header">
-        <h2 id="insightsTitle">Match Overview</h2>
+        <h2 id="insightsTitle">Game Overview</h2>
         <p id="insightsSubtitle">Live stats from tracking data</p>
         <div id="fmPlayerLinkWrap" class="fm-player-link-wrap coach-only" hidden>
-          <a id="fmPlayerLink" class="btn btn-ghost" href="/hub/enter">Open in Football Manager →</a>
+          <a id="fmPlayerLink" class="btn btn-ghost" href="/hub/enter">Feedback</a>
         </div>
-      </div>
-      <div class="team-pills insights-team-pills coach-only" id="insightsTeamPills">
-        <span class="team-pills-label">View team</span>
-        <button type="button" class="pill t1 active" data-team="1">Team 1</button>
-        <button type="button" class="pill t2" data-team="2">Team 2</button>
       </div>
       <div class="insights-body" id="insightsBody"></div>
     </aside>
@@ -924,7 +947,7 @@
     <div class="ax-topbar">
       <div>
         <h2 id="analyticsTitle">Analytics</h2>
-        <p id="analyticsSubtitle">Match intelligence</p>
+        <p id="analyticsSubtitle">Game intelligence</p>
       </div>
       <div class="spacer"></div>
       <button type="button" class="btn btn-ghost" id="btnAnalyticsClose">Close</button>
@@ -996,14 +1019,14 @@
     }
 
     function syncTeamPillUI() {
-      document.querySelectorAll('#sidebarTeamPills .pill, #insightsTeamPills .pill').forEach(btn => {
+      document.querySelectorAll('#sidebarTeamPills .pill').forEach(btn => {
         const tid = parseInt(btn.dataset.team, 10);
         btn.classList.toggle('active', tid === teamFilter);
       });
     }
 
     function updateTeamPillLabels() {
-      document.querySelectorAll('#sidebarTeamPills .pill, #insightsTeamPills .pill').forEach(btn => {
+      document.querySelectorAll('#sidebarTeamPills .pill').forEach(btn => {
         const tid = parseInt(btn.dataset.team, 10);
         btn.textContent = teamDisplayName(tid);
         btn.title = (matchOverview?.teams || []).find(x => x.team_id === tid)?.team_name || btn.textContent;
@@ -1018,11 +1041,6 @@
       renderSidebar();
       if (!selectedPlayer) renderMatchInsights();
     };
-
-    function setInsightsTeamFilterVisible(visible) {
-      const pills = document.getElementById('insightsTeamPills');
-      if (pills) pills.hidden = !visible;
-    }
 
     const TEAM_COLORS = { 1: 't1', 2: 't2' };
     const TEAM_ELLIPSE_STROKE = { 1: '#f8fafc', 2: '#22c55e' };
@@ -1064,7 +1082,7 @@
             renderSidebar();
           });
         });
-        document.querySelectorAll('#sidebarTeamPills .pill, #insightsTeamPills .pill').forEach(btn => {
+        document.querySelectorAll('#sidebarTeamPills .pill').forEach(btn => {
           btn.addEventListener('click', () => {
             window.setCoachTeamFilter(parseInt(btn.dataset.team, 10));
           });
@@ -1086,7 +1104,7 @@
     function renderPlayerInsightsOnly() {
       const p = rosterStats[0];
       if (!p) {
-        insightsBody.innerHTML = '<div class="empty-msg">No tracking data for your jersey in this match.</div>';
+        insightsBody.innerHTML = '<div class="empty-msg">No tracking data for your jersey in this game.</div>';
         return;
       }
       renderPlayerInsights(APP_USER.team_id, APP_USER.jersey_number);
@@ -1144,7 +1162,6 @@
 
     function renderMatchInsights() {
       if (!IS_COACH || !matchOverview) return;
-      setInsightsTeamFilterVisible(true);
       const fmWrap = document.getElementById('fmPlayerLinkWrap');
       if (fmWrap) fmWrap.hidden = true;
       const o = matchOverview;
@@ -1175,7 +1192,7 @@
       insightsBody.innerHTML = `
         <div class="stat-grid">
           <div class="stat-card">
-            <div class="stat-label">Match length</div>
+            <div class="stat-label">Game length</div>
             <div class="stat-value">${o.duration_fmt || '—'}</div>
           </div>
           <div class="stat-card">
@@ -1183,7 +1200,7 @@
             <div class="stat-value sm">${teamPoss}%</div>
           </div>
           <div class="stat-card wide">
-            <div class="stat-label">Match possession (both teams)</div>
+            <div class="stat-label">Game possession (both teams)</div>
             <div class="possession-bar">
               <div class="t1" style="width:${p1}%"></div>
               <div class="t2" style="width:${p2}%"></div>
@@ -1333,7 +1350,7 @@
       const ball = p.ball_touch_sec > 0 ? formatSecShort(p.ball_touch_sec) : '—';
       const metaParts = [];
       if (p.position) metaParts.push(p.position);
-      if (p.on_pitch_pct > 0) metaParts.push(p.on_pitch_pct + '% match');
+      if (p.on_pitch_pct > 0) metaParts.push(p.on_pitch_pct + '% game');
       if (!p.detected) metaParts.push('not in video');
       else if (!metaParts.length) metaParts.push('tracked');
       el.innerHTML = `
@@ -1524,7 +1541,6 @@
     async function renderPlayerInsights(teamId, jerseyNumber) {
       insightsTitle.textContent = 'Player Profile';
       insightsSubtitle.textContent = '#' + jerseyNumber;
-      setInsightsTeamFilterVisible(false);
       const fmWrap = document.getElementById('fmPlayerLinkWrap');
       const fmLink = document.getElementById('fmPlayerLink');
       if (fmWrap) fmWrap.hidden = true;
@@ -1544,13 +1560,13 @@
           <div class="profile-jersey jersey-badge ${tc}" style="width:64px;height:64px;font-size:1.4rem;margin:0 auto 12px">${jerseyNumber}</div>
           <div class="profile-name">${escapeHtml(p.name || 'Unknown')}</div>
           <div class="profile-pos">${escapeHtml(p.position || '—')} · ${escapeHtml(p.team_name || '')}</div>
-          <span class="tag ${p.detected ? 'detected' : 'missing'}">${p.detected ? 'Detected in match' : 'Not detected'}</span>
+          <span class="tag ${p.detected ? 'detected' : 'missing'}">${p.detected ? 'Detected in game' : 'Not detected'}</span>
         </div>
         <div class="stat-grid">
           <div class="stat-card">
             <div class="stat-label">Pitch time</div>
             <div class="stat-value sm">${formatMin(p.pitch_time_sec || 0)}</div>
-            <div class="stat-sub">${p.on_pitch_pct || 0}% of match</div>
+            <div class="stat-sub">${p.on_pitch_pct || 0}% of game</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Ball touches</div>
@@ -1576,21 +1592,21 @@
       if (IS_COACH && fmWrap && fmLink) {
         fmWrap.hidden = false;
         fmLink.classList.add('is-loading');
-        fmLink.textContent = 'Loading Football Manager link…';
+        fmLink.textContent = 'Loading…';
         try {
           const r = await fetch(`/api/fm_player/${teamId}/${jerseyNumber}`);
           const data = await r.json();
           if (data.url) {
             fmLink.href = data.url;
             const labelName = data.name || p.name || ('#' + jerseyNumber);
-            fmLink.textContent = `Open ${labelName} in Football Manager →`;
+            fmLink.textContent = `Feedback from ${labelName}`;
           } else {
             fmLink.href = '/hub/enter';
-            fmLink.textContent = 'Open in Football Manager →';
+            fmLink.textContent = 'Feedback';
           }
         } catch (_) {
           fmLink.href = '/hub/enter';
-          fmLink.textContent = 'Open in Football Manager →';
+          fmLink.textContent = 'Feedback';
         } finally {
           fmLink.classList.remove('is-loading');
         }

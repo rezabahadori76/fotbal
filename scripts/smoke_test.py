@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quick smoke test for integrated PitchIQ + Football Manager SSO."""
+"""Quick smoke test for integrated PitchIQ + Soccer Manager SSO."""
 
 from __future__ import annotations
 
@@ -109,7 +109,7 @@ def main() -> int:
 
     print("Smoke test OK:")
     print("  - PitchIQ login: admin, coach, player")
-    print("  - Football Manager SSO via /hub/enter (no login page)")
+    print("  - Soccer Manager SSO via /hub/enter (no login page)")
     return 0
 
 

@@ -1,6 +1,6 @@
-# Academy Hub — Football Manager Dashboard
+# Academy Hub — Soccer Manager Dashboard
 
-A Next.js web dashboard for football academy clubs with three roles:
+A Next.js web dashboard for soccer academy clubs with three roles:
 
 | Role | Capabilities |
 |------|----------------|

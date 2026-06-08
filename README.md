@@ -1,6 +1,6 @@
 # fotbal_ui
 
-Football match analytics web UI: player tracking review, jersey assignment, coach and player dashboards.
+Soccer game analytics web UI: player tracking review, jersey assignment, coach and player dashboards.
 
 Built on top of tracking CSV/video outputs. Includes a Flask app for interactive editing and analytics, plus an embedded Academy Hub dashboard for admin/coach/player question workflows.
 
@@ -22,15 +22,15 @@ Copy or edit `users.json` for coach/player login credentials and change `secret_
 # Data pipeline (CSV cleanup, team fix, optional bbox video)
 python -m pipeline.run
 
-# Integrated web UI (PitchIQ + Football Manager Academy Hub)
+# Integrated web UI (PitchIQ + Soccer Manager Academy Hub)
 python run_dev.py
 ```
 
 **Start here:** [http://127.0.0.1:5050/login](http://127.0.0.1:5050/login) — sign in to PitchIQ (fotbal_ui video analytics).
 
-After sign-in, click **Football Manager** in the top bar to open the merged dashboard at `/hub` (questions, assignments, responses).
+After sign-in, click **Soccer Manager** in the top bar to open the merged dashboard at `/hub` (questions, assignments, responses).
 
-`run_dev.py` starts Flask (`:5050`) and Next.js (`:3000`). Flask proxies `/hub/*` into the Football Manager app so everything runs inside **fotbal_ui** on one port.
+`run_dev.py` starts Flask (`:5050`) and Next.js (`:3000`). Flask proxies `/hub/*` into the Soccer Manager app so everything runs inside **fotbal_ui** on one port.
 
 First-time Academy Hub setup:
 
@@ -50,7 +50,7 @@ npm run db:setup
 | Coach | `coach` / `coach123` |
 | Player | team + jersey # / `player123` |
 
-**Academy Hub (Football Manager)** — tab Academy, or `/hub/login`:
+**Academy Hub (Soccer Manager)** — tab Academy, or `/hub/login`:
 
 | Role | Email | Password |
 |------|-------|----------|

@@ -94,7 +94,7 @@ export function DashboardShell({
         <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-card-border bg-background/90 backdrop-blur px-6 py-3 lg:px-8">
           <BackToPitchIQ compact />
           <span className="text-xs text-muted hidden sm:inline">
-            Return to match video &amp; analytics
+            Return to game video &amp; analytics
           </span>
         </div>
         <div className="p-8 max-w-6xl flex-1">{children}</div>

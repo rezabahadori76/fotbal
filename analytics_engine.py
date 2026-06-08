@@ -1,4 +1,4 @@
-"""Match & player analytics built from tracking CSV + roster config."""
+"""Game & player analytics built from tracking CSV + roster config."""
 
 from __future__ import annotations
 
@@ -510,7 +510,7 @@ def build_player_analytics(
     if profile.get("detected"):
         report_bullets.append(
             f"You were on pitch for {_fmt_duration(profile.get('pitch_time_sec', 0))} "
-            f"({profile.get('on_pitch_pct', 0):.0f}% of the match)."
+            f"({profile.get('on_pitch_pct', 0):.0f}% of the game)."
         )
         if profile.get("ball_touches", 0) > 0:
             report_bullets.append(
@@ -519,7 +519,7 @@ def build_player_analytics(
                 f"rank #{rank_touch} on your team."
             )
         else:
-            report_bullets.append("No registered ball touches in tracking data for this match.")
+            report_bullets.append("No registered ball touches in tracking data for this game.")
         report_bullets.append(
             f"Involvement score {inv}/100 — rank #{rank_inv} among {len(team_mates)} tracked teammates."
         )
@@ -528,7 +528,7 @@ def build_player_analytics(
         elif profile.get("pitch_time_sec", 0) < team_avg_pitch * 0.85:
             report_bullets.append("Below-average pitch time — consider reviewing positioning clips.")
     else:
-        report_bullets.append("You were not detected in the tracking feed for this match.")
+        report_bullets.append("You were not detected in the tracking feed for this game.")
 
     return {
         "scope": "player",

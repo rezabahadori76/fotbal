@@ -126,7 +126,7 @@
     <div class="logo">
       <div class="logo-icon">⚽</div>
       <h1>PitchIQ</h1>
-      <p>Match video &amp; Football Manager portal</p>
+      <p>Game video &amp; Soccer Manager portal</p>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -145,11 +145,11 @@
       </div>
 
       <div class="panel{% if active_role|default('coach') == 'admin' %} active{% endif %}" id="panel-admin">
-        <p class="panel-desc">Admin portal — open Football Manager from the top bar after sign-in. No password needed.</p>
+        <p class="panel-desc">Admin portal — open Soccer Manager from the top bar after sign-in. No password needed.</p>
       </div>
 
       <div class="panel{% if active_role|default('coach') == 'coach' %} active{% endif %}" id="panel-coach">
-        <p class="panel-desc">Coach video analytics. Football Manager opens automatically with the same account.</p>
+        <p class="panel-desc">Coach video analytics. Soccer Manager opens automatically with the same account.</p>
         <div class="field">
           <label for="username">Username</label>
           <input type="text" id="username" name="username" autocomplete="username" placeholder="coach" value="{{ username|default('') }}" />
@@ -157,7 +157,7 @@
       </div>
 
       <div class="panel{% if active_role|default('coach') == 'player' %} active{% endif %}" id="panel-player">
-        <p class="panel-desc">Player video portal. Football Manager opens automatically with the same account.</p>
+        <p class="panel-desc">Player video portal. Soccer Manager opens automatically with the same account.</p>
         <div class="field">
           <label for="team_id">Team</label>
           <select id="team_id" name="team_id">
@@ -184,7 +184,7 @@
 
     <div class="hint">
       <div class="hint-panel{% if active_role|default('coach') == 'admin' %} active{% endif %}" id="hint-admin">
-        <strong>Admin</strong> — click Sign in, then open <strong>Football Manager</strong> in the top bar.
+        <strong>Admin</strong> — click Sign in, then open <strong>Soccer Manager</strong> in the top bar.
       </div>
       <div class="hint-panel{% if active_role|default('coach') == 'coach' %} active{% endif %}" id="hint-coach">
         <strong>Coach demo</strong> — <code>coach</code> / <code>coach123</code>

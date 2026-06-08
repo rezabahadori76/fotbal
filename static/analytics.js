@@ -129,7 +129,7 @@
     root.innerHTML = `
       ${teamFilterBarHtml(data, teamId)}
       <div class="ax-kpi-row">
-        <div class="ax-kpi accent"><div class="label">Match length</div><div class="value">${esc(m.duration_fmt || '—')}</div></div>
+        <div class="ax-kpi accent"><div class="label">Game length</div><div class="value">${esc(m.duration_fmt || '—')}</div></div>
         <div class="ax-kpi"><div class="label">Squad tracked</div><div class="value">${team.players_detected || 0}<span style="font-size:0.9rem;color:var(--muted)"> / ${team.squad_registered || 0}</span></div></div>
         <div class="ax-kpi"><div class="label">Team ball touches</div><div class="value">${team.ball_touches || 0}</div><div class="sub">${fmtTime(team.ball_touch_sec || 0)}</div></div>
         <div class="ax-kpi"><div class="label">Possession</div><div class="value">${team.possession_pct != null ? team.possession_pct + '%' : '—'}</div></div>
@@ -139,7 +139,7 @@
         <div class="ax-insight"><span class="icon">${ins.icon || '•'}</span><div><div class="title">${esc(ins.title)}</div><div class="body">${esc(ins.body)}</div></div></div>`).join('')}</div>` : ''}
 
       <div class="ax-card">
-        <h3>📈 Match possession (both teams)</h3>
+        <h3>📈 Game possession (both teams)</h3>
         ${possessionTimelineHtml(data.possession_timeline)}
       </div>
 
@@ -249,7 +249,7 @@
       </div>
 
       <div class="ax-kpi-row">
-        <div class="ax-kpi accent"><div class="label">Pitch time</div><div class="value">${fmtTime(p.pitch_time_sec || 0)}</div><div class="sub">${p.on_pitch_pct || 0}% of match</div></div>
+        <div class="ax-kpi accent"><div class="label">Pitch time</div><div class="value">${fmtTime(p.pitch_time_sec || 0)}</div><div class="sub">${p.on_pitch_pct || 0}% of game</div></div>
         <div class="ax-kpi"><div class="label">Ball touches</div><div class="value">${p.ball_touches || 0}</div></div>
         <div class="ax-kpi"><div class="label">On ball</div><div class="value">${fmtTime(p.ball_touch_sec || 0)}</div></div>
         <div class="ax-kpi"><div class="label">Appearances</div><div class="value">${p.pitch_segments || 0}</div></div>
@@ -309,7 +309,7 @@
           back.type = 'button';
           back.className = 'btn btn-ghost';
           back.style.marginBottom = '12px';
-          back.textContent = '← Back to match report';
+          back.textContent = '← Back to game report';
           back.addEventListener('click', () => window.PitchIQAnalytics.open({
             isCoach: true,
             teamId: coachAnalyticsTeamId,
@@ -326,7 +326,7 @@
         data = await r.json();
 
         if (data.scope === 'coach') {
-          title.textContent = 'Match Analytics';
+          title.textContent = 'Game Analytics';
           subtitle.textContent = 'Select a team to view separated reports';
           body.innerHTML = '';
           renderCoach(data, body, (team, jersey) => {

@@ -750,6 +750,9 @@ def make_app(
             return redirect(url_for("index"))
         c = app.config["EDITOR_CTX"]
         user = current_user_dict()
+        match = team_config.get("match", {})
+        team1 = match.get("team_1", {}).get("name", "Team 1")
+        team2 = match.get("team_2", {}).get("name", "Team 2")
         return render_template(
             "player_editor.html",
             max_frame=c["max_frame"],
@@ -760,6 +763,8 @@ def make_app(
             csv_name=csv_path.name,
             current_user=user,
             academy_dashboard_url="/hub/enter",
+            match_title=f"{team1} vs {team2}",
+            match_date="25 May",
         )
 
     @app.route("/favicon.ico")

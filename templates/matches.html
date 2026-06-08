@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Matches — PitchIQ</title>
+  <title>Games — PitchIQ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -157,7 +157,7 @@
         <div class="brand-icon">⚽</div>
         <div>
           <h1>PitchIQ</h1>
-          <div class="eyebrow">Match Intelligence</div>
+          <div class="eyebrow">Game Intelligence</div>
         </div>
       </div>
       <div class="actions">
@@ -167,18 +167,16 @@
     </header>
 
     <section class="hero">
-      <h2>Select a match</h2>
-      <p>Choose a game to open its video, player tracking, Camera Engaging clips, and Ball Engaging moments.</p>
+      <h2>Select a game to analysis</h2>
     </section>
 
-    <section class="grid" aria-label="Match list">
+    <section class="grid" aria-label="Game list">
       {% for game in games %}
         <a class="match-card" href="{{ game.url }}">
-          <div class="match-kicker">Available match</div>
+          <div class="match-kicker">Available game</div>
           <div class="match-title">{{ game.title }}</div>
           <div class="match-meta">
             {% if game.duration %}<span>{{ game.duration }}</span>{% endif %}
-            <span>Open analysis</span>
           </div>
         </a>
       {% endfor %}

@@ -15,7 +15,7 @@ const PREDEFINED_QUESTIONS = [
     optionD: "Struggling — need recovery",
   },
   {
-    text: "Rate your energy level after the match.",
+    text: "Rate your energy level after the game.",
     category: "Fitness",
     optionA: "Very high (9–10)",
     optionB: "Moderate (6–8)",
