@@ -11,6 +11,9 @@
   --pitch: #166534;
   --danger: #ef4444;
   --warning: #fbbf24;
+  --cta: #eef4ec;
+  --cta-foreground: #0a120e;
+  --info: #3b82f6;
 }
 
 @theme inline {
@@ -24,6 +27,9 @@
   --color-pitch: var(--pitch);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-cta: var(--cta);
+  --color-cta-foreground: var(--cta-foreground);
+  --color-info: var(--info);
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -94,4 +100,22 @@ button {
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-report,
+  .print-report * {
+    visibility: visible;
+  }
+  .print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+  }
 }

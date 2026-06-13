@@ -12,3 +12,7 @@ export function formatDate(date: Date | string) {
     year: "numeric",
   }).format(new Date(date));
 }
+
+export function dayFromInput(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
+}

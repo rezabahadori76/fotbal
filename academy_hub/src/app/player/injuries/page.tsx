@@ -45,7 +45,7 @@ export default async function PlayerInjuriesPage({
   return (
     <div className="space-y-6 max-w-md mx-auto sm:max-w-full">
       <Link href="/player/injuries?add=true" className="block w-full">
-        <div className="w-full text-center rounded-full bg-[#E5E5E5] text-black font-semibold py-3.5 text-sm hover:bg-white transition-colors flex items-center justify-center gap-2">
+        <div className="w-full text-center rounded-full bg-cta text-cta-foreground font-semibold py-3.5 text-sm hover:bg-white transition-colors flex items-center justify-center gap-2">
           <span>+</span> New Injury
         </div>
       </Link>

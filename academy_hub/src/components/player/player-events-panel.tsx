@@ -214,8 +214,8 @@ export function PlayerEventsPanel({ attendances }: { attendances: SerializedAtte
                 >
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2563EB]">
-                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-white stroke-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-info/20 border border-info/30">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-info stroke-2">
                           <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                           <path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z" />
                         </svg>

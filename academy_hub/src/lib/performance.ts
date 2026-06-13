@@ -8,7 +8,9 @@ export function dateInputValue(date: Date | string) {
   return new Date(date).toISOString().slice(0, 10);
 }
 
-export function wellnessReadiness(report?: WellnessReport | null) {
+export function wellnessReadiness(
+  report?: Pick<WellnessReport, "mood" | "energy" | "sleep" | "stress" | "soreness"> | null,
+) {
   if (!report) return 0;
   const stressPenalty = 11 - report.stress;
   const sorenessPenalty = 11 - report.soreness;
@@ -39,4 +41,55 @@ export function statusColorClass(value: number) {
   if (value >= 8) return "text-accent";
   if (value >= 5) return "text-warning";
   return "text-danger";
+}
+
+export function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+export function isSameDay(a: Date | string, b: Date = startOfToday()) {
+  return new Date(a).toDateString() === b.toDateString();
+}
+
+export function moodEmoji(mood: number) {
+  if (mood >= 8) return "😃";
+  if (mood >= 6) return "😊";
+  if (mood >= 4) return "😐";
+  if (mood >= 2) return "🙁";
+  return "😩";
+}
+
+export function moodText(mood: number) {
+  if (mood >= 8) return "Happy";
+  if (mood >= 6) return "Good";
+  if (mood >= 4) return "Okay";
+  if (mood >= 2) return "Down";
+  return "Terrible";
+}
+
+export type SquadStatus = "ready" | "missing_wellness" | "injured" | "pending_questions";
+
+export function squadStatusPriority(status: SquadStatus) {
+  const order: Record<SquadStatus, number> = {
+    injured: 0,
+    missing_wellness: 1,
+    pending_questions: 2,
+    ready: 3,
+  };
+  return order[status];
+}
+
+export function squadStatusLabel(status: SquadStatus) {
+  switch (status) {
+    case "ready":
+      return "Ready";
+    case "missing_wellness":
+      return "No wellness today";
+    case "injured":
+      return "Injured";
+    case "pending_questions":
+      return "Unanswered questions";
+  }
 }

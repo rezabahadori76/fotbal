@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { emptyToUndefined } from "@/lib/validators";
+import { dayFromInput } from "@/lib/utils";
 
 const score = z.coerce.number().int().min(1).max(10);
 
@@ -45,10 +46,6 @@ const eventSchema = z.object({
   notes: z.preprocess(emptyToUndefined, z.string().max(500).optional()),
   playerIds: z.array(z.string()).min(1),
 });
-
-function dayFromInput(value: string) {
-  return new Date(`${value}T00:00:00.000Z`);
-}
 
 async function requirePlayerProfile() {
   const session = await requireRole(Role.PLAYER);

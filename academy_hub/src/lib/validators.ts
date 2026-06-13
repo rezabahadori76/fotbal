@@ -71,3 +71,33 @@ export const assignQuestionSchema = z.object({
 export const answerSchema = z.object({
   selectedOption: z.coerce.number().int().min(0).max(3),
 });
+
+export const trainingLoadSchema = z.object({
+  sessionDate: z.string().min(1),
+  rpe: z.coerce.number().int().min(1).max(10),
+  durationMinutes: z.coerce.number().int().min(1).max(300),
+  sessionType: z.enum(["TRAINING", "MATCH", "RECOVERY", "OTHER"]).default("TRAINING"),
+  notes: z.preprocess(emptyToUndefined, z.string().max(500).optional()),
+  eventId: z.preprocess(emptyToUndefined, z.string().optional()),
+});
+
+export const announcementSchema = z.object({
+  title: z.string().min(2).max(120),
+  body: z.string().min(2).max(2000),
+  targetSquad: z.preprocess(emptyToUndefined, z.string().max(50).optional()),
+});
+
+export const developmentGoalSchema = z.object({
+  title: z.string().min(2).max(200),
+  description: z.preprocess(emptyToUndefined, z.string().max(1000).optional()),
+  targetDate: z.preprocess(emptyToUndefined, z.string().optional()),
+  playerId: z.string().min(1),
+});
+
+export const updateGoalSchema = z.object({
+  status: z.enum(["NOT_STARTED", "IN_PROGRESS", "ACHIEVED"]).optional(),
+  progressNote: z.preprocess(emptyToUndefined, z.string().max(1000).optional()),
+  title: z.preprocess(emptyToUndefined, z.string().min(2).max(200).optional()),
+  description: z.preprocess(emptyToUndefined, z.string().max(1000).optional()),
+  targetDate: z.preprocess(emptyToUndefined, z.string().optional()),
+});

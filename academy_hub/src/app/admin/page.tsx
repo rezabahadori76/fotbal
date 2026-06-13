@@ -51,6 +51,16 @@ export default async function AdminOverviewPage() {
       description: "Review player wellness, readiness, and injuries",
     },
     {
+      href: "/admin/announcements",
+      title: "Announcements",
+      description: "Broadcast team messages to players",
+    },
+    {
+      href: "/admin/goals",
+      title: "Development goals",
+      description: "Set and track individual player targets",
+    },
+    {
       href: "/admin/responses",
       title: "Player responses",
       description: "View each player's answers and outcomes",

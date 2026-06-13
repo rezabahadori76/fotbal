@@ -1,5 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
+import { BarChart, DonutChart } from "@/components/shared/simple-charts";
+import { ExportButtons } from "@/components/coach/export-buttons";
 import type { getCoachStatistics } from "@/lib/coach-statistics";
 
 type Stats = Awaited<ReturnType<typeof getCoachStatistics>>;
@@ -7,8 +9,31 @@ type Stats = Awaited<ReturnType<typeof getCoachStatistics>>;
 export function StatisticsView({ stats }: { stats: Stats }) {
   const { overview, categoryStats, questionStats, playerStats, recentAnswers } = stats;
 
+  const donutSegments = [
+    { label: "Answered", value: overview.answered, colorClass: "stroke-accent" },
+    { label: "Pending", value: overview.pending, colorClass: "stroke-warning" },
+  ].filter((s) => s.value > 0);
+
+  const playerBarData = playerStats.map((p) => ({
+    label: p.name,
+    value: p.rate,
+    colorClass: p.rate >= 80 ? "bg-accent" : p.rate >= 50 ? "bg-warning" : "bg-danger",
+  }));
+
+  const categoryBarData = categoryStats.map((c) => ({
+    label: c.category,
+    value: c.rate,
+    colorClass: "bg-pitch",
+  }));
+
   return (
     <div className="space-y-8">
+      <ExportButtons
+        wellnessHref="/hub/api/export/wellness"
+        responsesHref="/hub/api/export/responses"
+        trainingLoadHref="/hub/api/export/training-load"
+      />
+
       <div className="grid gap-4 sm:grid-cols-4">
         <Card>
           <p className="text-3xl font-display font-bold">{overview.total}</p>
@@ -28,32 +53,22 @@ export function StatisticsView({ stats }: { stats: Stats }) {
         </Card>
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="space-y-4">
+          <h2 className="font-display text-lg font-semibold">Response overview</h2>
+          <DonutChart segments={donutSegments} />
+        </Card>
+        <Card className="space-y-4">
+          <h2 className="font-display text-lg font-semibold">Player response rates</h2>
+          <BarChart data={playerBarData} />
+        </Card>
+      </div>
+
       <section className="space-y-4">
         <h2 className="font-display text-lg font-semibold">By category</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {categoryStats.length === 0 ? (
-            <Card>
-              <p className="text-muted text-sm">No data yet.</p>
-            </Card>
-          ) : (
-            categoryStats.map((c) => (
-              <Card key={c.category} className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium">{c.category}</span>
-                  <span className="text-muted">
-                    {c.answered}/{c.total} · {c.rate}%
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-background overflow-hidden">
-                  <div
-                    className="h-full bg-accent rounded-full transition-all"
-                    style={{ width: `${c.rate}%` }}
-                  />
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
+        <Card>
+          <BarChart data={categoryBarData} />
+        </Card>
       </section>
 
       <section className="space-y-4">
@@ -69,44 +84,16 @@ export function StatisticsView({ stats }: { stats: Stats }) {
                 <p className="font-medium">{q.questionText}</p>
                 <p className="text-xs text-muted">{q.category} · {q.total} responses</p>
               </div>
-              <div className="space-y-2">
-                {q.breakdown.map((b) => (
-                  <div key={b.option} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>
-                        <span className="font-display font-semibold text-accent">{b.option}</span>{" "}
-                        {b.label}
-                      </span>
-                      <span className="text-muted">
-                        {b.count} ({b.percent}%)
-                      </span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-background overflow-hidden">
-                      <div
-                        className="h-full bg-pitch rounded-full"
-                        style={{ width: `${b.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <BarChart
+                data={q.breakdown.map((b) => ({
+                  label: `${b.option} ${b.label}`,
+                  value: b.percent,
+                  colorClass: "bg-pitch",
+                }))}
+              />
             </Card>
           ))
         )}
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="font-display text-lg font-semibold">Player response rates</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {playerStats.map((p) => (
-            <Card key={p.name} className="flex justify-between items-center">
-              <span className="font-medium">{p.name}</span>
-              <span className="text-sm text-muted">
-                {p.answered}/{p.total} ({p.rate}%)
-              </span>
-            </Card>
-          ))}
-        </div>
       </section>
 
       {recentAnswers.length > 0 && (

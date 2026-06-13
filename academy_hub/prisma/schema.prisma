@@ -40,6 +40,19 @@ enum AttendanceStatus {
   NOT_ATTENDING
 }
 
+enum SessionType {
+  TRAINING
+  MATCH
+  RECOVERY
+  OTHER
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ACHIEVED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -57,6 +70,9 @@ model User {
 
   assignmentsSent QuestionAssignment[] @relation("AssignmentCoach")
   teamEvents TeamEvent[]
+  announcements Announcement[] @relation("AnnouncementAuthor")
+  developmentGoals DevelopmentGoal[] @relation("GoalCoach")
+  announcementReads AnnouncementRead[]
 }
 
 model PlayerProfile {
@@ -77,6 +93,8 @@ model PlayerProfile {
   wellnessReports WellnessReport[]
   injuryReports InjuryReport[]
   eventAttendances EventAttendance[]
+  trainingLoadReports TrainingLoadReport[]
+  developmentGoals DevelopmentGoal[] @relation("GoalPlayer")
 }
 
 model QuestionTemplate {
@@ -188,8 +206,79 @@ model TeamEvent {
   coach   User   @relation(fields: [coachId], references: [id], onDelete: Cascade)
 
   attendances EventAttendance[]
+  trainingLoadReports TrainingLoadReport[]
 
   @@index([coachId, eventDate])
+}
+
+model TrainingLoadReport {
+  id              String      @id @default(cuid())
+  sessionDate     DateTime
+  rpe             Int
+  durationMinutes Int
+  sessionType     SessionType @default(TRAINING)
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  playerId String
+  player   PlayerProfile @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  eventId String?
+  event   TeamEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([playerId, sessionDate])
+  @@index([eventId])
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  targetSquad String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  coachId String
+  coach   User @relation("AnnouncementAuthor", fields: [coachId], references: [id], onDelete: Cascade)
+
+  reads AnnouncementRead[]
+
+  @@index([coachId, createdAt])
+}
+
+model AnnouncementRead {
+  id        String   @id @default(cuid())
+  readAt    DateTime @default(now())
+
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([userId])
+}
+
+model DevelopmentGoal {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  status       GoalStatus @default(NOT_STARTED)
+  targetDate   DateTime?
+  progressNote String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  playerId String
+  player   PlayerProfile @relation("GoalPlayer", fields: [playerId], references: [id], onDelete: Cascade)
+
+  coachId String
+  coach   User @relation("GoalCoach", fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, status])
+  @@index([coachId])
 }
 
 model EventAttendance {
