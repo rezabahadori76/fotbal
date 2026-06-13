@@ -140,6 +140,90 @@ export async function seedDatabase() {
   const sampleQuestions = questions.slice(0, 5);
   const playerProfileIds = [...profileByJersey.values()];
 
+  const demoProfileId = profileByJersey.get(DEMO_PLAYER.jerseyNo);
+  if (demoProfileId) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const addDays = (offset: number) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() + offset);
+      return date;
+    };
+
+    const demoEvents = [
+      {
+        title: "Team Training",
+        eventDate: addDays(0),
+        startTime: "18:00",
+        endTime: "20:00",
+        location: "Main Pitch",
+        field: "Field A",
+        notes: "Bring cleats and water.",
+        status: "PENDING" as const,
+      },
+      {
+        title: "Match Prep",
+        eventDate: addDays(2),
+        startTime: "17:30",
+        endTime: "19:30",
+        location: "Training Center",
+        field: "Indoor",
+        notes: "Tactical walkthrough before Saturday.",
+        status: "ATTENDING" as const,
+      },
+      {
+        title: "Strength Session",
+        eventDate: addDays(5),
+        startTime: "16:00",
+        endTime: "17:00",
+        location: "Gym",
+        field: null,
+        notes: null,
+        status: "PENDING" as const,
+      },
+      {
+        title: "Recovery Run",
+        eventDate: addDays(-3),
+        startTime: "09:00",
+        endTime: "10:00",
+        location: "Track",
+        field: null,
+        notes: "Light pace only.",
+        status: "ATTENDING" as const,
+      },
+      {
+        title: "Scrimmage",
+        eventDate: addDays(-7),
+        startTime: "19:00",
+        endTime: "21:00",
+        location: "Main Pitch",
+        field: "Field B",
+        notes: null,
+        status: "NOT_ATTENDING" as const,
+      },
+    ];
+
+    for (const event of demoEvents) {
+      await prisma.teamEvent.create({
+        data: {
+          title: event.title,
+          eventDate: event.eventDate,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          timezone: "EDT",
+          location: event.location,
+          field: event.field,
+          notes: event.notes,
+          coachId: coach.id,
+          attendances: {
+            create: [{ playerId: demoProfileId, status: event.status }],
+          },
+        },
+      });
+    }
+  }
+
   for (let i = 0; i < playerProfileIds.length; i += 1) {
     const playerId = playerProfileIds[i];
     const jerseyNo = roster[i]?.number ?? i + 1;

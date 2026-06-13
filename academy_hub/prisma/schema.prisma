@@ -23,6 +23,23 @@ enum AssignmentStatus {
   ANSWERED
 }
 
+enum InjuryStatus {
+  ACTIVE
+  RECOVERING
+  RESOLVED
+}
+
+enum InjuryMechanism {
+  CONTACT
+  NON_CONTACT
+}
+
+enum AttendanceStatus {
+  PENDING
+  ATTENDING
+  NOT_ATTENDING
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -39,6 +56,7 @@ model User {
   customQuestions QuestionTemplate[] @relation("QuestionAuthor")
 
   assignmentsSent QuestionAssignment[] @relation("AssignmentCoach")
+  teamEvents TeamEvent[]
 }
 
 model PlayerProfile {
@@ -56,6 +74,9 @@ model PlayerProfile {
   coach   User   @relation("CoachPlayers", fields: [coachId], references: [id], onDelete: Cascade)
 
   assignments QuestionAssignment[]
+  wellnessReports WellnessReport[]
+  injuryReports InjuryReport[]
+  eventAttendances EventAttendance[]
 }
 
 model QuestionTemplate {
@@ -108,4 +129,81 @@ model Answer {
 
   assignmentId String             @unique
   assignment   QuestionAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+}
+
+model WellnessReport {
+  id        String   @id @default(cuid())
+  reportDate DateTime
+  mood      Int
+  energy    Int
+  sleep     Int
+  stress    Int
+  soreness  Int
+  restingHeartRate Int?
+  symptom   String?
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  playerId String
+  player   PlayerProfile @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, reportDate])
+  @@index([playerId, reportDate])
+}
+
+model InjuryReport {
+  id        String   @id @default(cuid())
+  bodyPart  String
+  specificPart String?
+  description String?
+  status    InjuryStatus @default(ACTIVE)
+  mechanism InjuryMechanism @default(CONTACT)
+  recurrence Boolean @default(false)
+  occurredAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  playerId String
+  player   PlayerProfile @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, status])
+  @@index([occurredAt])
+}
+
+model TeamEvent {
+  id        String   @id @default(cuid())
+  title     String
+  eventDate DateTime
+  startTime String
+  endTime   String
+  timezone  String @default("EDT")
+  location  String?
+  field     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coachId String
+  coach   User   @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  attendances EventAttendance[]
+
+  @@index([coachId, eventDate])
+}
+
+model EventAttendance {
+  id        String   @id @default(cuid())
+  status    AttendanceStatus @default(PENDING)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  eventId String
+  event   TeamEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  playerId String
+  player   PlayerProfile @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, playerId])
+  @@index([playerId, status])
 }

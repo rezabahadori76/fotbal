@@ -17,6 +17,12 @@ export default async function CoachOverviewPage() {
   const playerCount = await prisma.playerProfile.count({
     where: coachId ? { coachId } : undefined,
   });
+  const activeInjuries = await prisma.injuryReport.count({
+    where: coachId ? { player: { coachId }, status: { not: "RESOLVED" } } : { status: { not: "RESOLVED" } },
+  });
+  const upcomingEvents = await prisma.teamEvent.count({
+    where: coachId ? { coachId, eventDate: { gte: new Date() } } : { eventDate: { gte: new Date() } },
+  });
 
   const answered = assignments.filter((a) => a.answer != null).length;
   const pending = assignments.length - answered;
@@ -28,7 +34,7 @@ export default async function CoachOverviewPage() {
         <p className="text-muted mt-1">Your squad at a glance</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <p className="text-3xl font-display font-bold">{playerCount}</p>
           <p className="text-sm text-muted">Players in squad</p>
@@ -41,6 +47,14 @@ export default async function CoachOverviewPage() {
           <p className="text-3xl font-display font-bold text-accent">{answered}</p>
           <p className="text-sm text-muted">Answered</p>
         </Card>
+        <Card>
+          <p className="text-3xl font-display font-bold">{upcomingEvents}</p>
+          <p className="text-sm text-muted">Upcoming events</p>
+        </Card>
+        <Card>
+          <p className="text-3xl font-display font-bold text-danger">{activeInjuries}</p>
+          <p className="text-sm text-muted">Active injuries</p>
+        </Card>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -49,6 +63,12 @@ export default async function CoachOverviewPage() {
         </Link>
         <Link href="/coach/questions">
           <Button>Ask a question</Button>
+        </Link>
+        <Link href="/coach/events">
+          <Button variant="secondary">Create event</Button>
+        </Link>
+        <Link href="/coach/health">
+          <Button variant="secondary">View health</Button>
         </Link>
         <Link href="/coach/statistics">
           <Button variant="secondary">View statistics</Button>

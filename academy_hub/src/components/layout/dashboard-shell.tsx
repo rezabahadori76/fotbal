@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Role } from "@prisma/client";
 import {
   BarChart3,
+  CalendarDays,
   ClipboardList,
+  HeartPulse,
   LayoutDashboard,
   MessageSquare,
   Shield,
@@ -10,6 +12,7 @@ import {
 } from "lucide-react";
 import { SignOutButton } from "@/components/layout/sign-out-button";
 import { BackToPitchIQ } from "@/components/layout/back-to-pitchiq";
+import { DashboardNav } from "@/components/layout/dashboard-nav";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode };
 
@@ -23,17 +26,25 @@ const navByRole: Record<Role, NavItem[]> = {
       label: "Assign questions",
       icon: <ClipboardList className="h-4 w-4" />,
     },
+    { href: "/admin/events", label: "Events", icon: <CalendarDays className="h-4 w-4" /> },
+    { href: "/admin/health", label: "Health", icon: <HeartPulse className="h-4 w-4" /> },
     { href: "/admin/responses", label: "Player responses", icon: <Shield className="h-4 w-4" /> },
   ],
   [Role.COACH]: [
     { href: "/coach", label: "Overview", icon: <LayoutDashboard className="h-4 w-4" /> },
     { href: "/coach/players", label: "Players", icon: <Users className="h-4 w-4" /> },
+    { href: "/coach/events", label: "Events", icon: <CalendarDays className="h-4 w-4" /> },
+    { href: "/coach/health", label: "Health", icon: <HeartPulse className="h-4 w-4" /> },
     { href: "/coach/questions", label: "Ask questions", icon: <MessageSquare className="h-4 w-4" /> },
     { href: "/coach/statistics", label: "Statistics", icon: <BarChart3 className="h-4 w-4" /> },
     { href: "/coach/responses", label: "Responses", icon: <Shield className="h-4 w-4" /> },
   ],
   [Role.PLAYER]: [
-    { href: "/player", label: "My questions", icon: <MessageSquare className="h-4 w-4" /> },
+    { href: "/player", label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+    { href: "/player/status", label: "Status", icon: <HeartPulse className="h-4 w-4" /> },
+    { href: "/player/events", label: "Events", icon: <CalendarDays className="h-4 w-4" /> },
+    { href: "/player/injuries", label: "Injuries", icon: <Shield className="h-4 w-4" /> },
+    { href: "/player/questions", label: "Questions", icon: <MessageSquare className="h-4 w-4" /> },
   ],
 };
 
@@ -74,16 +85,7 @@ export function DashboardShell({
           <div className="mb-4 pb-4 border-b border-card-border">
             <BackToPitchIQ className="w-full justify-center" />
           </div>
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted hover:text-foreground hover:bg-background transition-colors"
-            >
-              {item.icon}
-              {item.label}
-            </Link>
-          ))}
+          <DashboardNav items={nav} />
         </nav>
         <div className="p-4 border-t border-card-border space-y-2">
           <p className="text-xs text-muted truncate">{userName}</p>
